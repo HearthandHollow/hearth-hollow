@@ -20,16 +20,20 @@ export async function uploadToS3(
   mimeType: string,
   projectId: string
 ): Promise<string> {
+  // Get bucket name from env or use default
+  const bucketName = process.env.AWS_S3_BUCKET || 'hearth-hollow-quotes';
+  const region = process.env.AWS_REGION || 'us-east-1';
+  
   // If S3 is not configured, return a placeholder URL
-  if (!s3Client || !process.env.AWS_S3_BUCKET) {
-    console.warn("S3 not configured, using placeholder URL");
+  if (!s3Client) {
+    console.warn("S3 client not initialized, using placeholder URL");
     return `https://placeholder-bucket.s3.amazonaws.com/projects/${projectId}/${filename}`;
   }
 
   const key = `projects/${projectId}/${crypto.randomBytes(8).toString("hex")}-${filename}`;
 
   const command = new PutObjectCommand({
-    Bucket: process.env.AWS_S3_BUCKET,
+    Bucket: bucketName,
     Key: key,
     Body: Buffer.from(buffer),
     ContentType: mimeType,
@@ -39,7 +43,7 @@ export async function uploadToS3(
 
   try {
     await s3Client.send(command);
-    return `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION || "us-east-1"}.amazonaws.com/${key}`;
+    return `https://${bucketName}.s3.${region}.amazonaws.com/${key}`;
   } catch (error) {
     console.error("S3 upload error:", error);
     // Fallback to placeholder if upload fails
