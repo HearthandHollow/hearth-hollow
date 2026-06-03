@@ -1,0 +1,8 @@
+VERSION: Dashboard Reorganized with Customer Profiles and Search
+DEPLOYED: 2026-06-03 22:09 UTC
+COMMIT: 53a6d66 (Trigger redeploy)
+DASHBOARD_FEATURES:
+- Customer profiles grouped by email
+- Search by email, name, phone
+- Dashboard statistics
+- Status tracking
