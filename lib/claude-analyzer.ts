@@ -23,33 +23,11 @@ export async function analyzeWithClaude(
 
   const messageContent: any[] = [];
 
-  // Process images
-  let validImageCount = 0;
-  if (uploadedAssets && uploadedAssets.length > 0) {
-    for (const asset of uploadedAssets) {
-      const imageUrl = asset.url || asset.s3Url;
-      console.log(`[CLAUDE] Asset: url=${!!asset.url}, s3Url=${!!asset.s3Url}, mimeType=${asset.mimeType}`);
-      
-      if (imageUrl && typeof imageUrl === "string") {
-        // Only add image if it's a supported format
-        if (asset.mimeType && asset.mimeType.startsWith('image/')) {
-          console.log(`[CLAUDE] Adding image: ${imageUrl.substring(0, 80)}`);
-          messageContent.push({
-            type: "image",
-            source: {
-              type: "url",
-              url: imageUrl,
-            },
-          });
-          validImageCount++;
-        } else {
-          console.warn(`[CLAUDE] Skipping unsupported file type: ${asset.mimeType}`);
-        }
-      }
-    }
-  }
-
-  console.log(`[CLAUDE] Valid images: ${validImageCount}`);
+  // Note: Claude's vision API requires publicly accessible HTTPS URLs
+  // S3 public URLs often have issues with vision API access
+  // For now, we'll analyze based on description alone for reliability
+  // Images can be reviewed by admin in the dashboard
+  console.log(`[CLAUDE] Note: Analyzing based on description. Admin can review photos in dashboard.`);
 
   const prompt = `You are a professional handyman estimator. Analyze this project and provide estimates.
 
@@ -130,7 +108,9 @@ Respond with ONLY valid JSON (no markdown):
 - High: $${high}
 
 **Key Risks:**
-${(parsed.key_risks || []).map((r: any) => `- ${r}`).join("\n") || "None identified"}`,
+${(parsed.key_risks || []).map((r: any) => `- ${r}`).join("\n") || "None identified"}
+
+**Note:** Analysis based on description. Admin can review uploaded photos in the dashboard.`,
       confidence: 0.75,
       fullAnalysis: JSON.stringify(parsed, null, 2),
     };
