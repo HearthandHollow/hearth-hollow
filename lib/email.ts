@@ -17,7 +17,7 @@ export async function sendConfirmationEmail(
     const result = await resend.emails.send({
       from: SENDER_EMAIL, // Your verified domain email
       to: customerEmail,
-      replyTo: "quotes@thehearthhollow.com",
+      reply_to: "quotes@thehearthhollow.com",
       subject: "We Received Your Quote Request",
       html: `
         <h2>Thanks, ${customerName}!</h2>
@@ -47,7 +47,7 @@ export async function sendEstimateEmail(
     const result = await resend.emails.send({
       from: SENDER_EMAIL, // Your verified domain email
       to: customerEmail,
-      replyTo: "quotes@thehearthhollow.com",
+      reply_to: "quotes@thehearthhollow.com",
       subject: `Your Project Estimate - Reference #${projectId}`,
       html: `
         <h2>Your Project Estimate</h2>
@@ -79,7 +79,7 @@ export async function sendCustomEmail(
     const result = await resend.emails.send({
       from: SENDER_EMAIL,
       to,
-      replyTo: "quotes@thehearthhollow.com",
+      reply_to: "quotes@thehearthhollow.com",
       subject,
       html,
       text: text || html.replace(/<[^>]*>/g, ""), // Strip HTML if no text provided
