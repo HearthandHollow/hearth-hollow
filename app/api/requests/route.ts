@@ -22,6 +22,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!prisma) {
+      return NextResponse.json(
+        { error: "Database not available" },
+        { status: 503 }
+      );
+    }
+
     // Get or create customer
     let customer = await prisma.customer.findUnique({
       where: { email },
@@ -38,8 +45,8 @@ export async function POST(req: NextRequest) {
       data: {
         customerId: customer.id,
         category,
-        location,
-        timeline,
+        location: location || "",
+        timeline: timeline || "",
         description,
         status: "submitted",
       },
@@ -47,24 +54,31 @@ export async function POST(req: NextRequest) {
 
     // Upload files
     const files = formData.getAll("files") as File[];
-    for (const file of files) {
-      const buffer = await file.arrayBuffer();
-      const s3Url = await uploadToS3(
-        buffer,
-        file.name,
-        file.type,
-        projectRequest.id
-      );
+    if (files && files.length > 0) {
+      for (const file of files) {
+        try {
+          const buffer = await file.arrayBuffer();
+          const s3Url = await uploadToS3(
+            buffer,
+            file.name,
+            file.type,
+            projectRequest.id
+          );
 
-      await prisma.uploadedAsset.create({
-        data: {
-          projectId: projectRequest.id,
-          filename: file.name,
-          s3Url,
-          mimeType: file.type,
-          fileSize: file.size,
-        },
-      });
+          await prisma.uploadedAsset.create({
+            data: {
+              projectId: projectRequest.id,
+              filename: file.name,
+              s3Url,
+              mimeType: file.type,
+              fileSize: file.size,
+            },
+          });
+        } catch (fileError) {
+          console.error(`Failed to upload file ${file.name}:`, fileError);
+          // Continue even if file upload fails
+        }
+      }
     }
 
     // TODO: Send confirmation email to customer
@@ -77,7 +91,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Error creating request:", error);
     return NextResponse.json(
-      { error: "Failed to create request" },
+      { error: "Failed to create request", details: String(error) },
       { status: 500 }
     );
   }
