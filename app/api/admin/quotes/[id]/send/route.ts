@@ -78,9 +78,14 @@ export async function POST(
     if (process.env.RESEND_API_KEY) {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY);
+        // For testing with Resend's onboarding email, send to admin email
+        const toEmail = process.env.RESEND_FROM_EMAIL 
+          ? quote.customer?.email || '' 
+          : 'hunterhammond@thehearthhollow.com'; // Send test emails to admin
+        
         const result = await resend.emails.send({
           from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
-          to: quote.customer?.email || '',
+          to: toEmail,
           subject: `Your Project Estimate - Reference #${quote.id}`,
           html: emailHtml,
         });
