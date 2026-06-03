@@ -1,0 +1,132 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id        String     @id @default(cuid())
+  name      String
+  email     String     @unique
+  phone     String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  projectRequests ProjectRequest[]
+  
+  @@map("customers")
+}
+
+model ProjectRequest {
+  id          String     @id @default(cuid())
+  customerId  String
+  customer    Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  category    String     // "carpentry", "handyman", "fence", etc.
+  location    String
+  timeline    String     // "ASAP", "2 weeks", etc.
+  description String     @db.Text
+  
+  status      String     @default("submitted") // submitted, analyzing, approved, sent, accepted, declined
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  uploadedAssets UploadedAsset[]
+  estimate       Estimate?
+  
+  @@map("project_requests")
+}
+
+model UploadedAsset {
+  id         String     @id @default(cuid())
+  projectId  String
+  project    ProjectRequest @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  filename   String
+  s3Url      String
+  mimeType   String
+  fileSize   Int
+  
+  createdAt  DateTime   @default(now())
+  
+  @@map("uploaded_assets")
+}
+
+model Estimate {
+  id          String     @id @default(cuid())
+  projectId   String     @unique
+  project     ProjectRequest @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  // AI Analysis
+  aiAnalysis  Json       // Full AI response
+  scope       String     @db.Text
+  complexity  Int        // 1-10
+  confidence  Float      // 0-1
+  risks       String     @db.Text
+  
+  // Cost breakdown
+  laborHours  Float
+  laborRate   Float      // per hour
+  laborCost   Float
+  
+  materialsJson Json     // Array of {item, qty, unitCost, total}
+  materialCost Float
+  
+  travelCost  Float
+  overheadCost Float
+  
+  // Estimates
+  lowEstimate Float
+  expectedEstimate Float
+  highEstimate Float
+  
+  // Admin modifications
+  modifiedBy  String?    // Admin who modified
+  modifications Json?    // Track changes
+  
+  // Status
+  status      String     @default("pending") // pending, approved, sent, accepted, declined
+  approvedAt  DateTime?
+  sentAt      DateTime?
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  @@map("estimates")
+}
+
+model EstimateHistory {
+  id          String     @id @default(cuid())
+  
+  // Copy of estimate at time of creation
+  estimateJson Json
+  
+  // Actual outcome
+  accepted    Boolean?
+  actualCost  Float?
+  completedAt DateTime?
+  notes       String?    @db.Text
+  
+  createdAt   DateTime   @default(now())
+  
+  @@map("estimate_history")
+}
+
+model AdminUser {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  password  String     // bcrypt hash
+  name      String
+  
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  @@map("admin_users")
+}
