@@ -63,6 +63,9 @@ export default function QuoteDetailPage() {
       }
       if (!response.ok) throw new Error('Failed to fetch quote');
       const data = await response.json();
+      console.log('[QUOTE]', 'Loaded quote:', quoteId);
+      console.log('[ASSETS]', 'Assets count:', data.uploadedAssets?.length || 0);
+      console.log('[ASSETS]', 'Asset details:', data.uploadedAssets);
       setQuote(data);
       setEditData({
         description: data.description,
@@ -291,6 +294,7 @@ export default function QuoteDetailPage() {
         {/* Uploaded Photos */}
         {quote.uploadedAssets && quote.uploadedAssets.length > 0 && (
           <div className="bg-white rounded-lg shadow-md p-8 mb-6">
+            {console.log('[RENDER]', 'Rendering', quote.uploadedAssets.length, 'photos')}
             <h2 className="text-xl font-bold mb-4">Photos ({quote.uploadedAssets.length})</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {quote.uploadedAssets.map((asset) => (
