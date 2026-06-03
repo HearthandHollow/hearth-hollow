@@ -47,7 +47,7 @@ export async function POST(
     console.log(`API Key available: ${!!process.env.ANTHROPIC_API_KEY}`);
 
     // Analyze with Claude
-    let analysis;
+    let analysis: any;
     try {
       analysis = await analyzeWithClaude(quote, quote.uploadedAssets || []);
     } catch (claudeError) {
@@ -62,7 +62,7 @@ export async function POST(
         materials: [],
         travel: 35,
         overhead: 100,
-        profitMargin: 200,
+        profitMargin: 0.25,
         lowEstimate: 800,
         expectedEstimate: 1100,
         highEstimate: 1500,
