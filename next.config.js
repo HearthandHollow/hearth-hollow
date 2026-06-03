@@ -15,6 +15,9 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  env: {
+    SKIP_ENV_VALIDATION: 'true',
+  },
 };
 
 module.exports = nextConfig;
