@@ -49,6 +49,7 @@ export default function QuoteDetailPage() {
     location: '',
     timeline: '',
   });
+  const [imageLoadErrors, setImageLoadErrors] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchQuote();
@@ -63,9 +64,9 @@ export default function QuoteDetailPage() {
       }
       if (!response.ok) throw new Error('Failed to fetch quote');
       const data = await response.json();
-      console.log('[QUOTE]', 'Loaded quote:', quoteId);
-      console.log('[ASSETS]', 'Assets count:', data.uploadedAssets?.length || 0);
-      console.log('[ASSETS]', 'Asset details:', data.uploadedAssets);
+      console.log('[QUOTE-DEBUG]', 'Loaded quote:', quoteId);
+      console.log('[ASSETS-DEBUG]', 'Assets count:', data.uploadedAssets?.length || 0);
+      console.log('[ASSETS-DEBUG]', 'Asset details:', data.uploadedAssets);
       setQuote(data);
       setEditData({
         description: data.description,
@@ -125,6 +126,11 @@ export default function QuoteDetailPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send estimate');
     }
+  };
+
+  const handleImageError = (assetId: string, s3Url: string) => {
+    console.error('[IMAGE-ERROR]', `Failed to load image: ${s3Url}`);
+    setImageLoadErrors(prev => ({ ...prev, [assetId]: true }));
   };
 
   if (loading) {
@@ -294,40 +300,61 @@ export default function QuoteDetailPage() {
         {/* Uploaded Photos */}
         {quote.uploadedAssets && quote.uploadedAssets.length > 0 && (
           <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-<h2 className="text-xl font-bold mb-4">Photos ({quote.uploadedAssets.length})</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {quote.uploadedAssets.map((asset) => (
-                <div key={asset.id} className="relative overflow-hidden rounded-lg bg-gray-200 group">
-                  {asset.mimeType.startsWith('image/') ? (
-                    <>
-                      <img
-                        src={asset.s3Url}
-                        alt={asset.filename}
-                        className="w-full h-48 object-cover"
-                        onError={(e) => {
-                          console.error('Image load error:', asset.s3Url);
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                      <a
-                        href={asset.s3Url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 opacity-0 group-hover:opacity-100 transition"
-                      >
-                        Open
-                      </a>
-                    </>
-                  ) : (
-                    <div className="w-full h-48 flex items-center justify-center bg-gray-100">
-                      <span className="text-gray-500 text-sm">Not an image</span>
+            <h2 className="text-xl font-bold mb-4">Uploaded Files ({quote.uploadedAssets.length})</h2>
+            <div className="space-y-3">
+              {quote.uploadedAssets.map((asset) => {
+                const hasError = imageLoadErrors[asset.id];
+                return (
+                  <div key={asset.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900">{asset.filename}</p>
+                        <p className="text-xs text-gray-500 mt-1">Type: {asset.mimeType}</p>
+                        <p className="text-xs text-gray-500 mt-1 break-all">
+                          S3 URL: <span className="font-mono text-blue-600">{asset.s3Url}</span>
+                        </p>
+                      </div>
+                      <div className="ml-4 flex gap-2">
+                        <a
+                          href={asset.s3Url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                        >
+                          Open
+                        </a>
+                        <a
+                          href={asset.s3Url}
+                          download
+                          className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                        >
+                          Download
+                        </a>
+                      </div>
                     </div>
-                  )}
-                  <p className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-2 truncate">
-                    {asset.filename}
-                  </p>
-                </div>
-              ))}
+                    
+                    {/* Try to show image preview */}
+                    {asset.mimeType.startsWith('image/') && !hasError && (
+                      <div className="mt-3">
+                        <img
+                          src={asset.s3Url}
+                          alt={asset.filename}
+                          className="max-w-xs h-auto rounded border border-gray-300"
+                          onError={() => handleImageError(asset.id, asset.s3Url)}
+                        />
+                      </div>
+                    )}
+                    
+                    {hasError && (
+                      <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
+                        ⚠️ Image failed to load. This may mean the file is still private on S3.
+                        <br />
+                        Click "Open" or "Download" to access it directly.
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
