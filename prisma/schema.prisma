@@ -64,24 +64,6 @@ model Estimate {
   projectId   String     @unique
   project     ProjectRequest @relation(fields: [projectId], references: [id], onDelete: Cascade)
   
-  // AI Analysis
-  aiAnalysis  Json       // Full AI response
-  scope       String     @db.Text
-  complexity  Int        // 1-10
-  confidence  Float      // 0-1
-  risks       String     @db.Text
-  
-  // Cost breakdown
-  laborHours  Float
-  laborRate   Float      // per hour
-  laborCost   Float
-  
-  materialsJson Json     // Array of {item, qty, unitCost, total}
-  materialCost Float
-  
-  travelCost  Float
-  overheadCost Float
-  
   // Estimates
   lowEstimate Float
   expectedEstimate Float
@@ -90,14 +72,10 @@ model Estimate {
   // Breakdown & analysis
   breakdown   String     @db.Text
   rawAnalysis String?    @db.Text
-  
-  // Admin modifications
-  modifiedBy  String?    // Admin who modified
-  modifications Json?    // Track changes
+  confidence  Float      @default(0.5)
   
   // Status
-  status      String     @default("pending") // pending, approved, sent, accepted, declined
-  approvedAt  DateTime?
+  status      String     @default("pending")
   sentAt      DateTime?
   
   createdAt   DateTime   @default(now())
