@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
       profilesMap[email].quotes.push(quote);
       profilesMap[email].lastQuoteDate = quote.createdAt.toISOString();
 
-      const status = quote.status as keyof typeof profilesMap[email]['statuses'];
+      const status = quote.status as 'submitted' | 'analyzed' | 'sent';
       if (status in profilesMap[email].statuses) {
         profilesMap[email].statuses[status]++;
       }
