@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -33,77 +33,42 @@ interface CustomerProfile {
 }
 
 export default function AdminDashboard() {
-  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [profiles, setProfiles] = useState<CustomerProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
 
   useEffect(() => {
-    fetchQuotes();
+    fetchProfiles();
   }, []);
 
-  const fetchQuotes = async () => {
+  const fetchProfiles = async () => {
     try {
       const response = await fetch('/api/admin/quotes');
       if (response.status === 401) {
         router.push('/admin');
         return;
       }
-      if (!response.ok) throw new Error('Failed to fetch quotes');
+      if (!response.ok) throw new Error('Failed to fetch profiles');
       const data = await response.json();
-      setQuotes(data);
+      setProfiles(data.profiles || []);
     } catch (err) {
-      setError('Failed to load quotes');
+      setError('Failed to load profiles');
     } finally {
       setLoading(false);
     }
   };
 
-  // Group quotes by email and create customer profiles
-  const customerProfiles = useMemo(() => {
-    const profiles: Record<string, CustomerProfile> = {};
-
-    quotes.forEach((quote) => {
-      const email = quote.customer?.email || 'unknown';
-      if (!profiles[email]) {
-        profiles[email] = {
-          email,
-          name: quote.customer?.name || 'Unknown',
-          phone: quote.customer?.phone || '',
-          quoteCount: 0,
-          quotes: [],
-          lastQuoteDate: '',
-          statuses: { submitted: 0, analyzed: 0, sent: 0 },
-        };
-      }
-
-      profiles[email].quoteCount++;
-      profiles[email].quotes.push(quote);
-      profiles[email].lastQuoteDate = quote.createdAt;
-
-      // Count statuses
-      const status = quote.status as keyof typeof profiles[email]['statuses'];
-      if (status in profiles[email].statuses) {
-        profiles[email].statuses[status]++;
-      }
-    });
-
-    return Object.values(profiles);
-  }, [quotes]);
-
   // Filter profiles based on search
-  const filteredProfiles = useMemo(() => {
-    if (!searchTerm.trim()) return customerProfiles;
-
+  const filteredProfiles = profiles.filter((profile) => {
     const term = searchTerm.toLowerCase();
-    return customerProfiles.filter(
-      (profile) =>
-        profile.email.toLowerCase().includes(term) ||
-        profile.name.toLowerCase().includes(term) ||
-        profile.phone.toLowerCase().includes(term)
+    return (
+      profile.email.toLowerCase().includes(term) ||
+      profile.name.toLowerCase().includes(term) ||
+      profile.phone.toLowerCase().includes(term)
     );
-  }, [customerProfiles, searchTerm]);
+  });
 
   const handleLogout = () => {
     fetch('/api/admin/logout', { method: 'POST' });
@@ -121,6 +86,13 @@ export default function AdminDashboard() {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const totalStats = {
+    customers: filteredProfiles.length,
+    quotes: filteredProfiles.reduce((sum, p) => sum + p.quoteCount, 0),
+    pending: filteredProfiles.reduce((sum, p) => sum + p.statuses.submitted, 0),
+    sent: filteredProfiles.reduce((sum, p) => sum + p.statuses.sent, 0),
   };
 
   return (
@@ -184,28 +156,25 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-lg shadow p-4">
             <p className="text-gray-600 text-sm">Total Customers</p>
             <p className="text-3xl font-bold text-gray-900">
-              {filteredProfiles.length}
+              {totalStats.customers}
             </p>
           </div>
           <div className="bg-white rounded-lg shadow p-4">
             <p className="text-gray-600 text-sm">Total Quotes</p>
             <p className="text-3xl font-bold text-gray-900">
-              {filteredProfiles.reduce((sum, p) => sum + p.quoteCount, 0)}
+              {totalStats.quotes}
             </p>
           </div>
           <div className="bg-white rounded-lg shadow p-4">
             <p className="text-gray-600 text-sm">Pending Analysis</p>
             <p className="text-3xl font-bold text-blue-600">
-              {filteredProfiles.reduce(
-                (sum, p) => sum + p.statuses.submitted,
-                0
-              )}
+              {totalStats.pending}
             </p>
           </div>
           <div className="bg-white rounded-lg shadow p-4">
             <p className="text-gray-600 text-sm">Sent Estimates</p>
             <p className="text-3xl font-bold text-purple-600">
-              {filteredProfiles.reduce((sum, p) => sum + p.statuses.sent, 0)}
+              {totalStats.sent}
             </p>
           </div>
         </div>
@@ -216,9 +185,8 @@ export default function AdminDashboard() {
             Customer Profiles
           </h2>
           <p className="text-gray-600 text-sm mt-1">
-            {filteredProfiles.length} customer{filteredProfiles.length !== 1 ? 's' : ''} with{' '}
-            {filteredProfiles.reduce((sum, p) => sum + p.quoteCount, 0)} total quote
-            {filteredProfiles.reduce((sum, p) => sum + p.quoteCount, 0) !== 1 ? 's' : ''}
+            {totalStats.customers} customer{totalStats.customers !== 1 ? 's' : ''} with{' '}
+            {totalStats.quotes} total quote{totalStats.quotes !== 1 ? 's' : ''}
           </p>
         </div>
 
@@ -240,107 +208,100 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredProfiles
-              .sort(
-                (a, b) =>
-                  new Date(b.lastQuoteDate).getTime() -
-                  new Date(a.lastQuoteDate).getTime()
-              )
-              .map((profile) => (
-                <div
-                  key={profile.email}
-                  className="bg-white rounded-lg shadow hover:shadow-lg transition"
-                >
-                  {/* Customer Header */}
-                  <div className="p-6 border-b border-gray-100">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {profile.name}
-                        </h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {profile.email}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {profile.phone}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-amber-600">
-                          {profile.quoteCount}
-                        </p>
-                        <p className="text-xs text-gray-500">Quote{profile.quoteCount !== 1 ? 's' : ''}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Last:{' '}
-                          {new Date(profile.lastQuoteDate).toLocaleDateString()}
-                        </p>
-                      </div>
+            {filteredProfiles.map((profile) => (
+              <div
+                key={profile.email}
+                className="bg-white rounded-lg shadow hover:shadow-lg transition"
+              >
+                {/* Customer Header */}
+                <div className="p-6 border-b border-gray-100">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {profile.name}
+                      </h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {profile.email}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {profile.phone}
+                      </p>
                     </div>
-
-                    {/* Status Badges */}
-                    <div className="flex gap-2 mt-4">
-                      {profile.statuses.submitted > 0 && (
-                        <span className="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800">
-                          {profile.statuses.submitted} Pending
-                        </span>
-                      )}
-                      {profile.statuses.analyzed > 0 && (
-                        <span className="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
-                          {profile.statuses.analyzed} Ready
-                        </span>
-                      )}
-                      {profile.statuses.sent > 0 && (
-                        <span className="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800">
-                          {profile.statuses.sent} Sent
-                        </span>
-                      )}
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-amber-600">
+                        {profile.quoteCount}
+                      </p>
+                      <p className="text-xs text-gray-500">Quote{profile.quoteCount !== 1 ? 's' : ''}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Last:{' '}
+                        {new Date(profile.lastQuoteDate).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Quotes List */}
-                  <div className="divide-y divide-gray-100">
-                    {profile.quotes
-                      .sort(
-                        (a, b) =>
-                          new Date(b.createdAt).getTime() -
-                          new Date(a.createdAt).getTime()
-                      )
-                      .map((quote) => (
-                        <Link
-                          key={quote.id}
-                          href={`/admin/quotes/${quote.id}`}
-                          className="p-4 hover:bg-gray-50 cursor-pointer transition flex justify-between items-center"
-                        >
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">
-                              {quote.category}
-                            </p>
-                            <p className="text-sm text-gray-600 line-clamp-1 mt-1">
-                              {quote.description}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Quote #{quote.id.substring(0, 8)} •{' '}
-                              {new Date(quote.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="ml-4">
-                            <span
-                              className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
-                                quote.status
-                              )}`}
-                            >
-                              {quote.status}
-                            </span>
-                          </div>
-                        </Link>
-                      ))}
+                  {/* Status Badges */}
+                  <div className="flex gap-2 mt-4">
+                    {profile.statuses.submitted > 0 && (
+                      <span className="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800">
+                        {profile.statuses.submitted} Pending
+                      </span>
+                    )}
+                    {profile.statuses.analyzed > 0 && (
+                      <span className="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
+                        {profile.statuses.analyzed} Ready
+                      </span>
+                    )}
+                    {profile.statuses.sent > 0 && (
+                      <span className="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800">
+                        {profile.statuses.sent} Sent
+                      </span>
+                    )}
                   </div>
                 </div>
-              ))}
+
+                {/* Quotes List */}
+                <div className="divide-y divide-gray-100">
+                  {profile.quotes
+                    .sort(
+                      (a, b) =>
+                        new Date(b.createdAt).getTime() -
+                        new Date(a.createdAt).getTime()
+                    )
+                    .map((quote) => (
+                      <Link
+                        key={quote.id}
+                        href={`/admin/quotes/${quote.id}`}
+                        className="p-4 hover:bg-gray-50 cursor-pointer transition flex justify-between items-center"
+                      >
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {quote.category}
+                          </p>
+                          <p className="text-sm text-gray-600 line-clamp-1 mt-1">
+                            {quote.description}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Quote #{quote.id.substring(0, 8)} •{' '}
+                            {new Date(quote.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="ml-4">
+                          <span
+                            className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
+                              quote.status
+                            )}`}
+                          >
+                            {quote.status}
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
     </div>
   );
 }
-/* Deployed at Wed Jun  3 19:11:05 UTC 2026 */
