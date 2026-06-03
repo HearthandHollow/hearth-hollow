@@ -87,6 +87,10 @@ model Estimate {
   expectedEstimate Float
   highEstimate Float
   
+  // Breakdown & analysis
+  breakdown   String     @db.Text
+  rawAnalysis String?    @db.Text
+  
   // Admin modifications
   modifiedBy  String?    // Admin who modified
   modifications Json?    // Track changes
