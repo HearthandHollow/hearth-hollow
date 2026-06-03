@@ -74,7 +74,7 @@ export async function POST(
       data: { status: 'analyzed' },
       include: {
         customer: true,
-        assets: true,
+        uploadedAssets: true,
         estimate: true,
       },
     });
