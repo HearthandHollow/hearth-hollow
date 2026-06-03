@@ -1,4 +1,5 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import crypto from "crypto";
 
 let s3Client: S3Client | null = null;
@@ -37,13 +38,25 @@ export async function uploadToS3(
     Key: key,
     Body: Buffer.from(buffer),
     ContentType: mimeType,
-    // Make the object publicly readable
-    ACL: "public-read",
   });
 
   try {
     await s3Client.send(command);
-    return `https://${bucketName}.s3.${region}.amazonaws.com/${key}`;
+    
+    // Generate a signed URL that expires in 7 days (604800 seconds)
+    const getCommand = new GetObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+    });
+    
+    const signedUrl = await getSignedUrl(s3Client, getCommand, {
+      expiresIn: 604800, // 7 days
+    });
+    
+    console.log(`[S3] Successfully uploaded: ${key}`);
+    console.log(`[S3] Signed URL expires in 7 days`);
+    
+    return signedUrl;
   } catch (error) {
     console.error("S3 upload error:", error);
     // Fallback to placeholder if upload fails
