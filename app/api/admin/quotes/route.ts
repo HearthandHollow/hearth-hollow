@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
 
       profilesMap[email].quoteCount++;
       profilesMap[email].quotes.push(quote);
-      profilesMap[email].lastQuoteDate = quote.createdAt;
+      profilesMap[email].lastQuoteDate = quote.createdAt.toISOString();
 
       const status = quote.status as keyof typeof profilesMap[email]['statuses'];
       if (status in profilesMap[email].statuses) {
