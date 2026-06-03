@@ -255,3 +255,4 @@ Private — Built for your handyman business
 ---
 
 **Ready to deploy?** Run `git push` and watch Vercel build! 🚀
+// Force redeploy Wed Jun  3 17:29:29 UTC 2026
