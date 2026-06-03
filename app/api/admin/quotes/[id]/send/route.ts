@@ -51,6 +51,7 @@ export async function POST(
 
     console.log(`Sending estimate for quote ${params.id} to ${quote.customer?.email}`);
     console.log(`Resend API Key available: ${!!process.env.RESEND_API_KEY}`);
+    console.log(`From email: ${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}`);
 
     // Send email with estimate
     const emailHtml = `
@@ -78,11 +79,13 @@ export async function POST(
     if (process.env.RESEND_API_KEY) {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY);
-        // For testing with Resend's onboarding email, send to admin email
-        const toEmail = process.env.RESEND_FROM_EMAIL 
-          ? quote.customer?.email || '' 
-          : 'hunterhammond@thehearthhollow.com'; // Send test emails to admin
+        // Always send to the customer email (not admin)
+        const toEmail = quote.customer?.email;
         
+        if (!toEmail) {
+          throw new Error('No customer email available');
+        }
+
         const result = await resend.emails.send({
           from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
           to: toEmail,

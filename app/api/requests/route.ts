@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { uploadToS3 } from "@/lib/s3";
+import { sendConfirmationEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   try {
@@ -81,8 +82,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // TODO: Send confirmation email to customer
-    // TODO: Trigger AI analysis in background
+    // Send confirmation email to customer
+    try {
+      await sendConfirmationEmail(email, name, projectRequest.id);
+      console.log(`Confirmation email sent to ${email}`);
+    } catch (emailError) {
+      console.error("Failed to send confirmation email:", emailError);
+      // Don't fail the request if email fails
+    }
 
     return NextResponse.json(
       { id: projectRequest.id, message: "Request received" },
