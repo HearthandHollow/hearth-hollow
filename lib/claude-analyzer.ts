@@ -6,18 +6,14 @@ export async function analyzeWithClaude(
 ): Promise<any> {
   console.log(`[CLAUDE] Starting analysis for quote ${quote.id}`);
   console.log(`[CLAUDE] Category: ${quote.category}`);
-  console.log(`[CLAUDE] Description: ${quote.description.substring(0, 60)}`);
 
-  // Check API key
   const apiKey = process.env.ANTHROPIC_API_KEY;
   console.log(`[CLAUDE] API Key available: ${!!apiKey}`);
-  console.log(`[CLAUDE] API Key length: ${apiKey ? apiKey.length : 0}`);
 
   if (!apiKey) {
     throw new Error("ANTHROPIC_API_KEY environment variable is not set");
   }
 
-  // Create client
   let client: Anthropic;
   try {
     client = new Anthropic({ apiKey });
@@ -65,26 +61,48 @@ Respond with ONLY valid JSON (no markdown):
   console.log(`[CLAUDE] Calling Claude API...`);
 
   try {
-    const response = await client.messages.create({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 500,
-      messages: [
-        {
-          role: "user",
-          content: messageContent as any,
-        },
-      ],
-    });
+    // Try claude-3-5-sonnet first, fall back to claude-3-sonnet if not available
+    let model = "claude-3-5-sonnet-20241022";
+    let response;
+    
+    try {
+      response = await client.messages.create({
+        model: model,
+        max_tokens: 500,
+        messages: [
+          {
+            role: "user",
+            content: messageContent as any,
+          },
+        ],
+      });
+    } catch (modelError: any) {
+      if (modelError.status === 404 && modelError.message?.includes("claude-3-5-sonnet")) {
+        console.log(`[CLAUDE] Model ${model} not available, trying claude-3-sonnet...`);
+        model = "claude-3-sonnet-20240229";
+        response = await client.messages.create({
+          model: model,
+          max_tokens: 500,
+          messages: [
+            {
+              role: "user",
+              content: messageContent as any,
+            },
+          ],
+        });
+      } else {
+        throw modelError;
+      }
+    }
 
-    console.log(`[CLAUDE] Got response from Claude`);
+    console.log(`[CLAUDE] Got response from Claude using model: ${model}`);
 
     const responseText =
       response.content[0].type === "text" ? response.content[0].text : "";
 
     console.log(`[CLAUDE] Response length: ${responseText.length}`);
-    console.log(`[CLAUDE] First 150 chars: ${responseText.substring(0, 150)}`);
 
-    // Parse JSON - be lenient
+    // Parse JSON
     let jsonStr = responseText.trim();
 
     // Remove markdown
@@ -102,8 +120,6 @@ Respond with ONLY valid JSON (no markdown):
     if (jsonStart >= 0 && jsonEnd > jsonStart) {
       jsonStr = jsonStr.substring(jsonStart, jsonEnd + 1);
     }
-
-    console.log(`[CLAUDE] Attempting to parse JSON: ${jsonStr.substring(0, 100)}`);
 
     const parsed = JSON.parse(jsonStr);
     console.log(`[CLAUDE] Successfully parsed JSON`);
@@ -143,4 +159,3 @@ ${(parsed.key_risks || []).map((r: any) => `- ${r}`).join("\n") || "None identif
     throw error;
   }
 }
-// Deployed with valid API key
