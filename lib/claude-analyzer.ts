@@ -118,10 +118,10 @@ Example:
 
     // Remove markdown code blocks if present
     if (jsonStr.includes("```json")) {
-      console.log(`[CLAUDE] Removing ```json markdown`);
+      console.log("[CLAUDE] Removing markdown json code block");
       jsonStr = jsonStr.split("```json")[1].split("```")[0].trim();
     } else if (jsonStr.includes("```")) {
-      console.log(`[CLAUDE] Removing ``` markdown`);
+      console.log("[CLAUDE] Removing markdown code block");
       jsonStr = jsonStr.split("```")[1].split("```")[0].trim();
     }
 
