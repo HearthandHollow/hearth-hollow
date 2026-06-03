@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     const quotes = await prisma.projectRequest.findMany({
       include: {
         customer: true,
-        assets: true,
+        uploadedAssets: true,
         estimate: true,
       },
       orderBy: { createdAt: 'desc' },

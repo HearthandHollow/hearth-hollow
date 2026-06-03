@@ -30,7 +30,7 @@ export async function GET(
       where: { id: params.id },
       include: {
         customer: true,
-        assets: true,
+        uploadedAssets: true,
         estimate: true,
       },
     });

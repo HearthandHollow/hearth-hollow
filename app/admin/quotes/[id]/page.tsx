@@ -18,7 +18,7 @@ interface Quote {
     email: string;
     phone: string;
   };
-  assets?: Array<{
+  uploadedAssets?: Array<{
     id: string;
     filename: string;
     s3Url: string;
@@ -187,13 +187,13 @@ export default function QuoteDetailPage() {
             </div>
 
             {/* Photos */}
-            {quote.assets && quote.assets.length > 0 && (
+            {quote.uploadedAssets && quote.uploadedAssets.length > 0 && (
               <div className="bg-white rounded-lg shadow p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">
-                  Photos ({quote.assets.length})
+                  Photos ({quote.uploadedAssets.length})
                 </h2>
                 <div className="grid grid-cols-2 gap-4">
-                  {quote.assets.map((asset) => (
+                  {quote.uploadedAssets.map((asset) => (
                     <a
                       key={asset.id}
                       href={asset.s3Url}

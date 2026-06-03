@@ -31,7 +31,7 @@ export async function POST(
       where: { id: params.id },
       include: {
         customer: true,
-        assets: true,
+        uploadedAssets: true,
         estimate: true,
       },
     });
@@ -44,7 +44,7 @@ export async function POST(
     }
 
     // Analyze with Claude
-    const analysis = await analyzeWithClaude(quote, quote.assets || []);
+    const analysis = await analyzeWithClaude(quote, quote.uploadedAssets || []);
 
     // Save estimate
     const estimate = await prisma.estimate.upsert({
