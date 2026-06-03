@@ -160,3 +160,64 @@ EXAMPLE FORMAT (but generate unique data for each project):
     recommendedNextStep: parsed.recommendedNextStep || "Schedule site visit for exact measurements",
   };
 }
+
+// Legacy wrapper function for API route compatibility
+export async function analyzeWithClaude(
+  quote: any,
+  uploadedAssets: any[]
+): Promise<any> {
+  // Extract image URLs from uploaded assets
+  const imageUrls = uploadedAssets
+    .map((asset: any) => asset.url || asset.s3Url)
+    .filter((url: any) => !!url);
+
+  // Call the new analyzeProject function
+  const analysis = await analyzeProject(
+    quote.description,
+    imageUrls,
+    quote.id
+  );
+
+  // Transform to legacy format expected by the API route
+  const materialsCost = analysis.materials.reduce(
+    (sum: number, m: any) => sum + (m.total || 0),
+    0
+  );
+  const laborCost = analysis.estimatedLabor.hours * analysis.estimatedLabor.rate;
+  const subtotal = laborCost + materialsCost + analysis.travel + analysis.overhead;
+  const profitAmount = subtotal * analysis.profitMargin;
+  const expectedEstimate = Math.round(subtotal + profitAmount);
+
+  return {
+    scope: analysis.scope,
+    complexity: analysis.complexity,
+    estimatedLabor: analysis.estimatedLabor,
+    materials: analysis.materials,
+    travel: analysis.travel,
+    overhead: analysis.overhead,
+    profitMargin: analysis.profitMargin,
+    lowEstimate: Math.round(expectedEstimate * 0.8),
+    expectedEstimate: expectedEstimate,
+    highEstimate: Math.round(expectedEstimate * 1.3),
+    confidence: analysis.confidence,
+    breakdown: `
+**Project Scope:** ${analysis.scope}
+
+**Complexity:** ${analysis.complexity}/10
+
+**Materials:**
+${analysis.materials.map((m: any) => `- ${m.item}: $${m.total || 0}`).join("\n") || "None specified"}
+
+**Labor:** ${analysis.estimatedLabor.hours} hours @ $${analysis.estimatedLabor.rate}/hr = $${laborCost}
+**Travel:** $${analysis.travel}
+**Overhead:** $${analysis.overhead}
+
+**Risks & Flags:**
+${analysis.flagsAndRisks.map((f: any) => `- ${f}`).join("\n") || "None identified"}
+
+**Next Steps:**
+${analysis.recommendedNextStep}
+    `,
+    fullAnalysis: JSON.stringify(analysis, null, 2),
+  };
+}
