@@ -33,6 +33,8 @@ export async function uploadToS3(
     Key: key,
     Body: Buffer.from(buffer),
     ContentType: mimeType,
+    // Make the object publicly readable
+    ACL: "public-read",
   });
 
   try {
