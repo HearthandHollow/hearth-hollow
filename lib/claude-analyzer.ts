@@ -6,207 +6,157 @@ const client = new Anthropic({
 
 export interface ProjectAnalysis {
   scope: string;
-  complexity: number;
+  complexity: number; // 1-10
   estimatedLabor: { hours: number; rate: number };
   materials: Array<{ item: string; qty: number; unitCost: number; total: number }>;
   travel: number;
   overhead: number;
   profitMargin: number;
-  lowEstimate: number;
-  expectedEstimate: number;
-  highEstimate: number;
-  confidence: number;
-  breakdown: string;
-  fullAnalysis: string;
-}
-
-interface Asset {
-  id: string;
-  filename: string;
-  s3Url: string;
-  mimeType: string;
-}
-
-interface Quote {
-  id: string;
-  category: string;
-  description: string;
-  location?: string;
-  timeline?: string;
-}
-
-export async function analyzeWithClaude(
-  quote: Quote,
-  assets: Asset[]
-): Promise<ProjectAnalysis> {
-  try {
-    // Build image content from uploaded assets
-    const imageContent = assets
-      .filter(asset => asset.mimeType.startsWith('image'))
-      .map(asset => ({
-        type: "image" as const,
-        source: {
-          type: "url" as const,
-          url: asset.s3Url,
-        },
-      }));
-
-    const analysisPrompt = `You are an expert handyman and project estimator with 15+ years of experience.
-
-Analyze this ${quote.category} project and provide a detailed cost estimate.
-
-PROJECT DETAILS:
-- Category: ${quote.category}
-- Location: ${quote.location || 'Not specified'}
-- Timeline: ${quote.timeline || 'Flexible'}
-- Description: ${quote.description}
-
-Based on the images and description, provide:
-1. A clear scope of work
-2. Labor estimate (hours and rate: $50-75/hr for starter)
-3. Materials needed with costs
-4. Travel costs
-5. Three price estimates (low, expected, high)
-6. Confidence score (0-1) based on how clear the project is
-
-Respond with a JSON object:
-{
-  "scope": "clear summary of work",
-  "complexity": 5,
-  "laborHours": 8,
-  "laborRate": 60,
-  "materials": [{"item": "name", "qty": 1, "unitCost": 100, "total": 100}],
-  "travelCost": 35,
-  "overheadPercent": 0.15,
-  "profitMargin": 0.25,
-  "lowEstimate": 1000,
-  "expectedEstimate": 1200,
-  "highEstimate": 1500,
-  "confidence": 0.8,
-  "breakdown": "detailed breakdown text"
-}`;
-
-    const response = await client.messages.create({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 2000,
-      messages: [
-        {
-          role: "user",
-          content: [
-            ...imageContent,
-            {
-              type: "text",
-              text: analysisPrompt,
-            },
-          ],
-        },
-      ],
-    });
-
-    // Extract text response
-    const responseText =
-      response.content[0].type === "text" ? response.content[0].text : "";
-
-    // Parse JSON
-    let jsonStr = responseText;
-    if (responseText.includes("```json")) {
-      jsonStr = responseText.split("```json")[1].split("```")[0];
-    } else if (responseText.includes("```")) {
-      jsonStr = responseText.split("```")[1].split("```")[0];
-    }
-
-    const parsed = JSON.parse(jsonStr.trim());
-
-    // Calculate totals
-    const materialsCost = (parsed.materials || []).reduce(
-      (sum: number, m: any) => sum + (m.total || 0),
-      0
-    );
-    const laborCost = (parsed.laborHours || 8) * (parsed.laborRate || 60);
-    const subtotal = laborCost + materialsCost + (parsed.travelCost || 0);
-    const overhead = subtotal * (parsed.overheadPercent || 0.15);
-    const profitMargin = (subtotal + overhead) * (parsed.profitMargin || 0.25);
-
-    return {
-      scope: parsed.scope || "Project work",
-      complexity: parsed.complexity || 5,
-      estimatedLabor: {
-        hours: parsed.laborHours || 8,
-        rate: parsed.laborRate || 60,
-      },
-      materials: parsed.materials || [],
-      travel: parsed.travelCost || 35,
-      overhead,
-      profitMargin,
-      lowEstimate: Math.round(parsed.lowEstimate || subtotal),
-      expectedEstimate: Math.round(parsed.expectedEstimate || subtotal + overhead + profitMargin),
-      highEstimate: Math.round(parsed.highEstimate || (subtotal + overhead + profitMargin) * 1.2),
-      confidence: parsed.confidence || 0.5,
-      breakdown: parsed.breakdown || formatBreakdown(parsed),
-      fullAnalysis: responseText,
-    };
-  } catch (error) {
-    console.error("Claude analysis error:", error);
-    throw new Error("Failed to analyze project with Claude");
-  }
-}
-
-function formatBreakdown(analysis: any): string {
-  const lines = [
-    `SCOPE: ${analysis.scope || 'Project work'}`,
-    `COMPLEXITY: ${analysis.complexity || 5}/10`,
-    '',
-    'LABOR:',
-    `  Hours: ${analysis.laborHours || 8}h @ $${analysis.laborRate || 60}/hr = $${((analysis.laborHours || 8) * (analysis.laborRate || 60)).toLocaleString()}`,
-    '',
-    'MATERIALS:',
-  ];
-
-  if (analysis.materials && analysis.materials.length > 0) {
-    analysis.materials.forEach((m: any) => {
-      lines.push(`  ${m.item}: ${m.qty}x @ $${m.unitCost} = $${m.total?.toLocaleString()}`);
-    });
-  } else {
-    lines.push('  TBD on site visit');
-  }
-
-  lines.push('');
-  lines.push(`TRAVEL: $${analysis.travelCost || 35}`);
-  lines.push('');
-  lines.push('COST SUMMARY:');
-  const laborCost = (analysis.laborHours || 8) * (analysis.laborRate || 60);
-  const matCost = (analysis.materials || []).reduce((sum: number, m: any) => sum + (m.total || 0), 0);
-  const subtotal = laborCost + matCost + (analysis.travelCost || 35);
-  const overhead = subtotal * (analysis.overheadPercent || 0.15);
-  lines.push(`  Labor: $${laborCost.toLocaleString()}`);
-  lines.push(`  Materials: $${matCost.toLocaleString()}`);
-  lines.push(`  Travel: $${analysis.travelCost || 35}`);
-  lines.push(`  Overhead (15%): $${Math.round(overhead).toLocaleString()}`);
-  lines.push('');
-  lines.push(`ESTIMATES:`);
-  lines.push(`  Low: $${analysis.lowEstimate?.toLocaleString()}`);
-  lines.push(`  Expected: $${analysis.expectedEstimate?.toLocaleString()}`);
-  lines.push(`  High: $${analysis.highEstimate?.toLocaleString()}`);
-
-  return lines.join('\n');
+  estimates: { low: number; expected: number; high: number };
+  confidence: number; // 0-1
+  flagsAndRisks: string[];
+  recommendedNextStep: string;
 }
 
 export async function analyzeProject(
   description: string,
-  imageUrls: string[]
+  imageUrls: string[],
+  projectId?: string
 ): Promise<ProjectAnalysis> {
-  const quote: Quote = {
-    id: 'temp',
-    category: 'general',
-    description,
+  // Build message with vision
+  const imageContent: any[] = [];
+  
+  // Add images if available
+  if (imageUrls && imageUrls.length > 0) {
+    for (const url of imageUrls) {
+      if (url) {
+        imageContent.push({
+          type: "image" as const,
+          source: {
+            type: "url" as const,
+            url: url,
+          },
+        });
+      }
+    }
+  }
+
+  const textContent = {
+    type: "text" as const,
+    text: `You are an expert handyman and project estimator with 15+ years of experience. 
+    
+CRITICAL: This is project #${projectId || "unknown"}. Generate COMPLETELY UNIQUE estimates for each project based on the actual details provided. NEVER return the same estimate twice.
+
+PROJECT DESCRIPTION:
+${description}
+
+${imageUrls && imageUrls.length > 0 ? `Images provided: ${imageUrls.length} photo(s)` : "No photos provided"}
+
+Based on the provided images and description, generate a detailed, UNIQUE JSON response with:
+
+1. **Scope**: Detailed summary of exactly what needs to be done for THIS project (not generic)
+2. **Complexity**: Rate 1-10 based on THIS specific project (1=trivial, 10=extremely complex)
+3. **EstimatedLabor**: Specific hours and hourly rate for THIS project (use $50-75/hr base)
+4. **Materials**: Specific items needed for THIS project (not generic - include actual quantities and costs)
+5. **Travel**: Estimate based on described location (usually $25-50)
+6. **Overhead**: 15% of labor subtotal (for business operations)
+7. **ProfitMargin**: 0.25-0.35 (25-35% of total cost)
+8. **Estimates**: 
+   - low: minimum cost (if everything goes perfectly)
+   - expected: most likely cost
+   - high: maximum cost (if complications arise)
+   MUST VARY SIGNIFICANTLY based on project complexity and unknowns
+9. **Confidence**: 0-1 score (1.0 = very clear, 0.0 = very unclear)
+   - Lower if photos are blurry or description is vague
+   - Higher if photos are clear and description is detailed
+10. **FlagsAndRisks**: Array of specific concerns for THIS project (not generic)
+    - Example: "Foundation appears uneven - may need leveling"
+    - Example: "Old plumbing may require replacement"
+    - Be specific to what you see/infer
+11. **RecommendedNextStep**: Specific next action for THIS project
+    - Example: "Site visit needed to measure exactly"
+    - Example: "Send additional photos of corner damage"
+
+RESPOND WITH ONLY VALID JSON - NO MARKDOWN CODE BLOCKS, NO EXPLANATION TEXT, NO EXTRA COMMENTARY.
+Start immediately with "{" and end with "}"
+
+EXAMPLE FORMAT (but generate unique data for each project):
+{
+  "scope": "Replace worn kitchen faucet, caulk around sink, fix cabinet hinge",
+  "complexity": 3,
+  "estimatedLabor": {"hours": 3, "rate": 60},
+  "materials": [
+    {"item": "Faucet (mid-range)", "qty": 1, "unitCost": 150, "total": 150},
+    {"item": "Caulk & supplies", "qty": 1, "unitCost": 20, "total": 20}
+  ],
+  "travel": 35,
+  "overhead": 27,
+  "profitMargin": 0.30,
+  "estimates": {"low": 350, "expected": 450, "high": 550},
+  "confidence": 0.85,
+  "flagsAndRisks": ["Check water pressure after install", "Old sink may have corrosion"],
+  "recommendedNextStep": "Send photo of current faucet installation"
+}`,
   };
 
-  const assets: Asset[] = imageUrls.map((url, i) => ({
-    id: `img-${i}`,
-    filename: `image-${i}.jpg`,
-    s3Url: url,
-    mimeType: 'image/jpeg',
-  }));
+  const messageContent = imageContent.length > 0 
+    ? [...imageContent, textContent]
+    : [textContent];
 
-  return analyzeWithClaude(quote, assets);
+  const response = await client.messages.create({
+    model: "claude-3-5-sonnet-20241022",
+    max_tokens: 2000,
+    messages: [
+      {
+        role: "user",
+        content: messageContent as any,
+      },
+    ],
+  });
+
+  // Extract JSON from response
+  const responseText =
+    response.content[0].type === "text" ? response.content[0].text : "";
+
+  // Parse JSON - be strict and handle various formats
+  let jsonStr = responseText.trim();
+  
+  // Remove markdown code blocks if present
+  if (jsonStr.includes("```json")) {
+    jsonStr = jsonStr.split("```json")[1].split("```")[0].trim();
+  } else if (jsonStr.includes("```")) {
+    jsonStr = jsonStr.split("```")[1].split("```")[0].trim();
+  }
+
+  // Find JSON object boundaries
+  const jsonStart = jsonStr.indexOf("{");
+  const jsonEnd = jsonStr.lastIndexOf("}");
+  if (jsonStart !== -1 && jsonEnd !== -1) {
+    jsonStr = jsonStr.substring(jsonStart, jsonEnd + 1);
+  }
+
+  // Parse JSON
+  const parsed = JSON.parse(jsonStr);
+
+  // Validate and return with defaults
+  return {
+    scope: parsed.scope || "Project analysis required",
+    complexity: Math.max(1, Math.min(10, parseInt(parsed.complexity) || 5)),
+    estimatedLabor: {
+      hours: Math.max(0.5, parseFloat(parsed.estimatedLabor?.hours) || 4),
+      rate: Math.max(30, parseFloat(parsed.estimatedLabor?.rate) || 60),
+    },
+    materials: Array.isArray(parsed.materials) ? parsed.materials : [],
+    travel: Math.max(0, parseFloat(parsed.travel) || 35),
+    overhead: Math.max(0, parseFloat(parsed.overhead) || 100),
+    profitMargin: Math.max(0.1, Math.min(0.5, parseFloat(parsed.profitMargin) || 0.3)),
+    estimates: {
+      low: Math.max(100, parseFloat(parsed.estimates?.low) || 800),
+      expected: Math.max(200, parseFloat(parsed.estimates?.expected) || 1200),
+      high: Math.max(300, parseFloat(parsed.estimates?.high) || 1600),
+    },
+    confidence: Math.max(0, Math.min(1, parseFloat(parsed.confidence) || 0.5)),
+    flagsAndRisks: Array.isArray(parsed.flagsAndRisks) ? parsed.flagsAndRisks : [],
+    recommendedNextStep: parsed.recommendedNextStep || "Schedule site visit for exact measurements",
+  };
 }
