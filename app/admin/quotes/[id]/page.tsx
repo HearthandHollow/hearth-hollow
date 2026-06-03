@@ -294,8 +294,7 @@ export default function QuoteDetailPage() {
         {/* Uploaded Photos */}
         {quote.uploadedAssets && quote.uploadedAssets.length > 0 && (
           <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-            {console.log('[RENDER]', 'Rendering', quote.uploadedAssets.length, 'photos')}
-            <h2 className="text-xl font-bold mb-4">Photos ({quote.uploadedAssets.length})</h2>
+<h2 className="text-xl font-bold mb-4">Photos ({quote.uploadedAssets.length})</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {quote.uploadedAssets.map((asset) => (
                 <div key={asset.id} className="relative overflow-hidden rounded-lg bg-gray-200 group">
