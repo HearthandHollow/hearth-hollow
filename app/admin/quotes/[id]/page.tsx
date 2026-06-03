@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
 
 interface Quote {
   id: string;
@@ -295,14 +294,31 @@ export default function QuoteDetailPage() {
             <h2 className="text-xl font-bold mb-4">Photos ({quote.uploadedAssets.length})</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {quote.uploadedAssets.map((asset) => (
-                <div key={asset.id} className="relative aspect-square overflow-hidden rounded-lg bg-gray-200">
-                  {asset.mimeType.startsWith('image/') && (
-                    <Image
-                      src={asset.s3Url}
-                      alt={asset.filename}
-                      fill
-                      className="object-cover"
-                    />
+                <div key={asset.id} className="relative overflow-hidden rounded-lg bg-gray-200 group">
+                  {asset.mimeType.startsWith('image/') ? (
+                    <>
+                      <img
+                        src={asset.s3Url}
+                        alt={asset.filename}
+                        className="w-full h-48 object-cover"
+                        onError={(e) => {
+                          console.error('Image load error:', asset.s3Url);
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                      <a
+                        href={asset.s3Url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 opacity-0 group-hover:opacity-100 transition"
+                      >
+                        Open
+                      </a>
+                    </>
+                  ) : (
+                    <div className="w-full h-48 flex items-center justify-center bg-gray-100">
+                      <span className="text-gray-500 text-sm">Not an image</span>
+                    </div>
                   )}
                   <p className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-2 truncate">
                     {asset.filename}
