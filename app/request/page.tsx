@@ -85,8 +85,13 @@ export default function RequestPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to submit request");
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Request failed: ${response.status}`);
+        } catch (parseErr) {
+          // If response isn't JSON, show status error
+          throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+        }
       }
 
       const result = await response.json();
