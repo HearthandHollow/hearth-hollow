@@ -60,14 +60,15 @@ Respond with ONLY valid JSON (no markdown):
 
   console.log(`[CLAUDE] Calling Claude API...`);
 
-  try {
-    // Try claude-3-5-sonnet first, fall back to claude-3-sonnet if not available
-    let model = "claude-3-5-sonnet-20241022";
-    let response;
-    
+  // Try primary model, fallback to secondary if needed
+  const models = ["claude-3-5-sonnet-20241022", "claude-3-sonnet-20240229"];
+  
+  for (const model of models) {
     try {
-      response = await client.messages.create({
-        model: model,
+      console.log(`[CLAUDE] Attempting with model: ${model}`);
+      
+      const response = await client.messages.create({
+        model: model as any,
         max_tokens: 500,
         messages: [
           {
@@ -76,67 +77,49 @@ Respond with ONLY valid JSON (no markdown):
           },
         ],
       });
-    } catch (modelError: any) {
-      if (modelError.status === 404 && modelError.message?.includes("claude-3-5-sonnet")) {
-        console.log(`[CLAUDE] Model ${model} not available, trying claude-3-sonnet...`);
-        model = "claude-3-sonnet-20240229";
-        response = await client.messages.create({
-          model: model,
-          max_tokens: 500,
-          messages: [
-            {
-              role: "user",
-              content: messageContent as any,
-            },
-          ],
-        });
-      } else {
-        throw modelError;
+
+      console.log(`[CLAUDE] Success with model: ${model}`);
+
+      const responseText =
+        response.content[0].type === "text" ? response.content[0].text : "";
+
+      console.log(`[CLAUDE] Response length: ${responseText.length}`);
+
+      // Parse JSON
+      let jsonStr = responseText.trim();
+
+      // Remove markdown
+      if (jsonStr.startsWith("```")) {
+        const match = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (match) {
+          jsonStr = match[1];
+        }
       }
-    }
 
-    console.log(`[CLAUDE] Got response from Claude using model: ${model}`);
+      // Extract JSON
+      const jsonStart = jsonStr.indexOf("{");
+      const jsonEnd = jsonStr.lastIndexOf("}");
 
-    const responseText =
-      response.content[0].type === "text" ? response.content[0].text : "";
-
-    console.log(`[CLAUDE] Response length: ${responseText.length}`);
-
-    // Parse JSON
-    let jsonStr = responseText.trim();
-
-    // Remove markdown
-    if (jsonStr.startsWith("```")) {
-      const match = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-      if (match) {
-        jsonStr = match[1];
+      if (jsonStart >= 0 && jsonEnd > jsonStart) {
+        jsonStr = jsonStr.substring(jsonStart, jsonEnd + 1);
       }
-    }
 
-    // Extract JSON
-    const jsonStart = jsonStr.indexOf("{");
-    const jsonEnd = jsonStr.lastIndexOf("}");
+      const parsed = JSON.parse(jsonStr);
+      console.log(`[CLAUDE] Successfully parsed JSON`);
 
-    if (jsonStart >= 0 && jsonEnd > jsonStart) {
-      jsonStr = jsonStr.substring(jsonStart, jsonEnd + 1);
-    }
+      const low = parseInt(parsed.low_estimate) || 500;
+      const expected = parseInt(parsed.expected_estimate) || 750;
+      const high = parseInt(parsed.high_estimate) || 1200;
 
-    const parsed = JSON.parse(jsonStr);
-    console.log(`[CLAUDE] Successfully parsed JSON`);
+      console.log(`[CLAUDE] Estimates: Low=$${low}, Expected=$${expected}, High=$${high}`);
 
-    const low = parseInt(parsed.low_estimate) || 500;
-    const expected = parseInt(parsed.expected_estimate) || 750;
-    const high = parseInt(parsed.high_estimate) || 1200;
-
-    console.log(`[CLAUDE] Estimates: Low=$${low}, Expected=$${expected}, High=$${high}`);
-
-    return {
-      lowEstimate: low,
-      expectedEstimate: expected,
-      highEstimate: high,
-      complexity: parsed.complexity || 5,
-      scope: parsed.scope_summary || "Project analysis",
-      breakdown: `
+      return {
+        lowEstimate: low,
+        expectedEstimate: expected,
+        highEstimate: high,
+        complexity: parsed.complexity || 5,
+        scope: parsed.scope_summary || "Project analysis",
+        breakdown: `
 **Project:** ${quote.category}
 **Description:** ${quote.description}
 
@@ -149,13 +132,25 @@ Respond with ONLY valid JSON (no markdown):
 
 **Key Risks:**
 ${(parsed.key_risks || []).map((r: any) => `- ${r}`).join("\n") || "None identified"}`,
-      confidence: 0.75,
-      fullAnalysis: JSON.stringify(parsed, null, 2),
-    };
-  } catch (error) {
-    console.error(`[CLAUDE] Error during analysis:`, error);
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error(`[CLAUDE] Error message: ${msg}`);
-    throw error;
+        confidence: 0.75,
+        fullAnalysis: JSON.stringify(parsed, null, 2),
+      };
+    } catch (error: any) {
+      console.error(`[CLAUDE] Error with model ${model}:`, error.message);
+      
+      // Check if it's a model not found error
+      if (error.status === 404 || (error.error?.type === "not_found_error")) {
+        console.log(`[CLAUDE] Model ${model} not available, trying next...`);
+        continue;
+      }
+      
+      // If it's the last model, throw the error
+      if (model === models[models.length - 1]) {
+        console.error(`[CLAUDE] All models failed`);
+        throw error;
+      }
+    }
   }
+  
+  throw new Error("Could not analyze with any available model");
 }
