@@ -143,3 +143,4 @@ ${(parsed.key_risks || []).map((r: any) => `- ${r}`).join("\n") || "None identif
     throw error;
   }
 }
+// Deployed with valid API key
