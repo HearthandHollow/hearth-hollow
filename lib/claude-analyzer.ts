@@ -8,8 +8,6 @@ export async function analyzeWithClaude(
   console.log(`[CLAUDE] Category: ${quote.category}`);
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  console.log(`[CLAUDE] API Key available: ${!!apiKey}`);
-
   if (!apiKey) {
     throw new Error("ANTHROPIC_API_KEY environment variable is not set");
   }
@@ -17,17 +15,13 @@ export async function analyzeWithClaude(
   let client: Anthropic;
   try {
     client = new Anthropic({ apiKey });
-    console.log(`[CLAUDE] Anthropic client created`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[CLAUDE] Failed to create Anthropic client: ${msg}`);
-    throw err;
+    throw new Error(`Failed to create Anthropic client: ${msg}`);
   }
 
-  // Build the message
   const messageContent: any[] = [];
 
-  // Add images if available
   if (uploadedAssets && uploadedAssets.length > 0) {
     for (const asset of uploadedAssets) {
       const imageUrl = asset.url || asset.s3Url;
@@ -41,10 +35,8 @@ export async function analyzeWithClaude(
         });
       }
     }
-    console.log(`[CLAUDE] Added ${messageContent.length} images`);
   }
 
-  // Add text prompt
   const prompt = `You are a professional handyman estimator. Analyze this project and provide estimates.
 
 CATEGORY: ${quote.category}
@@ -58,11 +50,9 @@ Respond with ONLY valid JSON (no markdown):
     text: prompt,
   });
 
-  console.log(`[CLAUDE] Calling Claude API with claude-haiku-3-5...`);
-
   try {
     const response = await client.messages.create({
-      model: "claude-haiku-3-5",
+      model: "claude-3-5-haiku-20241022",
       max_tokens: 500,
       messages: [
         {
@@ -72,17 +62,11 @@ Respond with ONLY valid JSON (no markdown):
       ],
     });
 
-    console.log(`[CLAUDE] Success with claude-haiku-3-5`);
-
     const responseText =
       response.content[0].type === "text" ? response.content[0].text : "";
 
-    console.log(`[CLAUDE] Response length: ${responseText.length}`);
-
-    // Parse JSON
     let jsonStr = responseText.trim();
 
-    // Remove markdown
     if (jsonStr.startsWith("```")) {
       const match = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
       if (match) {
@@ -90,7 +74,6 @@ Respond with ONLY valid JSON (no markdown):
       }
     }
 
-    // Extract JSON
     const jsonStart = jsonStr.indexOf("{");
     const jsonEnd = jsonStr.lastIndexOf("}");
 
@@ -99,13 +82,10 @@ Respond with ONLY valid JSON (no markdown):
     }
 
     const parsed = JSON.parse(jsonStr);
-    console.log(`[CLAUDE] Successfully parsed JSON`);
 
     const low = parseInt(parsed.low_estimate) || 500;
     const expected = parseInt(parsed.expected_estimate) || 750;
     const high = parseInt(parsed.high_estimate) || 1200;
-
-    console.log(`[CLAUDE] Estimates: Low=$${low}, Expected=$${expected}, High=$${high}`);
 
     return {
       lowEstimate: low,
@@ -130,9 +110,7 @@ ${(parsed.key_risks || []).map((r: any) => `- ${r}`).join("\n") || "None identif
       fullAnalysis: JSON.stringify(parsed, null, 2),
     };
   } catch (error) {
-    console.error(`[CLAUDE] Error during analysis:`, error);
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error(`[CLAUDE] Error message: ${msg}`);
+    console.error(`[CLAUDE] Error:`, error);
     throw error;
   }
 }
