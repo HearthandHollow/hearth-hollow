@@ -7,6 +7,7 @@ async function isAuthenticated(req: NextRequest) {
   return cookieStore.get('admin_session')?.value === 'authenticated';
 }
 
+// GET - Fetch quote details
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -16,13 +17,6 @@ export async function GET(
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
-      );
-    }
-
-    if (!prisma) {
-      return NextResponse.json(
-        { error: 'Database not available' },
-        { status: 503 }
       );
     }
 
@@ -47,6 +41,48 @@ export async function GET(
     console.error('Error fetching quote:', error);
     return NextResponse.json(
       { error: 'Failed to fetch quote' },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH - Update quote details
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    if (!await isAuthenticated(req)) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { description, category, location, timeline } = body;
+
+    // Update the quote
+    const quote = await prisma.projectRequest.update({
+      where: { id: params.id },
+      data: {
+        ...(description && { description }),
+        ...(category && { category }),
+        ...(location !== undefined && { location }),
+        ...(timeline !== undefined && { timeline }),
+      },
+      include: {
+        customer: true,
+        uploadedAssets: true,
+        estimate: true,
+      },
+    });
+
+    return NextResponse.json(quote);
+  } catch (error) {
+    console.error('Error updating quote:', error);
+    return NextResponse.json(
+      { error: 'Failed to update quote' },
       { status: 500 }
     );
   }
