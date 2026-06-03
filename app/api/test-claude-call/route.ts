@@ -19,9 +19,10 @@ export async function POST(req: NextRequest) {
     const client = new Anthropic({ apiKey });
     
     // Try models in order
-    const models = ['claude-3-5-sonnet-20241022', 'claude-3-sonnet-20240229'];
+    const models = ['claude-3-sonnet-20240229', 'claude-3-5-sonnet-20241022'];
     let response;
     let modelUsed = '';
+    let lastError = null;
     
     for (const model of models) {
       try {
@@ -40,17 +41,27 @@ export async function POST(req: NextRequest) {
         console.log(`[TEST-CALL] Success with ${model}`);
         break;
       } catch (error: any) {
-        console.error(`[TEST-CALL] Failed with ${model}:`, error.message);
-        if (error.status === 404 || error.error?.type === 'not_found_error') {
+        lastError = error;
+        console.error(`[TEST-CALL] Failed with ${model}`);
+        console.error(`[TEST-CALL] Error message: ${error?.message}`);
+        console.error(`[TEST-CALL] Error type: ${error?.type}`);
+        console.error(`[TEST-CALL] Error status: ${error?.status}`);
+        
+        // Check if it's a 404 model not found error
+        const errorStr = JSON.stringify(error);
+        if (errorStr.includes('not_found') || error?.status === 404) {
           console.log(`[TEST-CALL] Model not found, trying next...`);
           continue;
         }
+        
+        // Otherwise, throw this error
         throw error;
       }
     }
     
     if (!response) {
-      throw new Error('Could not use any available model');
+      console.error('[TEST-CALL] No response from any model');
+      throw lastError || new Error('Could not use any available model');
     }
     
     console.log('[TEST-CALL] Response received');
