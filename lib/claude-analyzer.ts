@@ -179,14 +179,12 @@ export async function analyzeWithClaude(
   );
 
   // Transform to legacy format expected by the API route
+  // Use Claude's estimates directly (they're already calculated and unique per project)
   const materialsCost = analysis.materials.reduce(
     (sum: number, m: any) => sum + (m.total || 0),
     0
   );
   const laborCost = analysis.estimatedLabor.hours * analysis.estimatedLabor.rate;
-  const subtotal = laborCost + materialsCost + analysis.travel + analysis.overhead;
-  const profitAmount = subtotal * analysis.profitMargin;
-  const expectedEstimate = Math.round(subtotal + profitAmount);
 
   return {
     scope: analysis.scope,
@@ -196,9 +194,9 @@ export async function analyzeWithClaude(
     travel: analysis.travel,
     overhead: analysis.overhead,
     profitMargin: analysis.profitMargin,
-    lowEstimate: Math.round(expectedEstimate * 0.8),
-    expectedEstimate: expectedEstimate,
-    highEstimate: Math.round(expectedEstimate * 1.3),
+    lowEstimate: Math.round(analysis.estimates.low),
+    expectedEstimate: Math.round(analysis.estimates.expected),
+    highEstimate: Math.round(analysis.estimates.high),
     confidence: analysis.confidence,
     breakdown: `
 **Project Scope:** ${analysis.scope}
