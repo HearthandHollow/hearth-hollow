@@ -22,6 +22,9 @@ const TIMELINES = [
   "Flexible",
 ];
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB per file
+const MAX_TOTAL_SIZE = 20 * 1024 * 1024; // 20MB total
+
 export default function RequestPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -46,12 +49,44 @@ export default function RequestPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      setUploadedFiles(prev => [...prev, ...newFiles]);
+      const validFiles: File[] = [];
+      let totalSize = uploadedFiles.reduce((sum, f) => sum + f.size, 0);
+
+      for (const file of newFiles) {
+        // Check individual file size
+        if (file.size > MAX_FILE_SIZE) {
+          setError(`File "${file.name}" is too large. Max 5MB per file.`);
+          continue;
+        }
+
+        // Check total size
+        if (totalSize + file.size > MAX_TOTAL_SIZE) {
+          setError(`Total file size exceeds 20MB limit.`);
+          continue;
+        }
+
+        validFiles.push(file);
+        totalSize += file.size;
+      }
+
+      setUploadedFiles(prev => [...prev, ...validFiles]);
     }
   };
 
   const removeFile = (index: number) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const getTotalFileSize = () => {
+    return uploadedFiles.reduce((sum, f) => sum + f.size, 0);
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,6 +98,12 @@ export default function RequestPage() {
       // Validate form (photos are optional)
       if (!formData.name || !formData.email || !formData.phone || !formData.category || !formData.description) {
         throw new Error("Please fill in all required fields");
+      }
+
+      // Check total file size before sending
+      const totalSize = getTotalFileSize();
+      if (totalSize > MAX_TOTAL_SIZE) {
+        throw new Error(`Total file size (${formatFileSize(totalSize)}) exceeds 20MB limit. Please remove some files.`);
       }
 
       // Create FormData for multipart upload
@@ -90,6 +131,9 @@ export default function RequestPage() {
           throw new Error(errorData.error || `Request failed: ${response.status}`);
         } catch (parseErr) {
           // If response isn't JSON, show status error
+          if (response.status === 413) {
+            throw new Error("Files are too large. Please reduce the number of images or their size.");
+          }
           throw new Error(`Request failed: ${response.status} ${response.statusText}`);
         }
       }
@@ -200,6 +244,7 @@ export default function RequestPage() {
           {/* File Upload */}
           <div className="border-b pb-6">
             <h2 className="text-lg font-semibold mb-4">Upload Photos <span className="text-sm font-normal text-gray-600">(Optional)</span></h2>
+            <p className="text-sm text-gray-500 mb-3">Max 5MB per file, 20MB total</p>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 transition">
               <input
                 type="file"
@@ -212,17 +257,18 @@ export default function RequestPage() {
               <label htmlFor="file-input" className="cursor-pointer">
                 <div className="text-4xl mb-2">📸</div>
                 <p className="font-semibold">Click to upload or drag and drop</p>
-                <p className="text-sm text-gray-600">PNG, JPG, GIF up to 10MB each</p>
+                <p className="text-sm text-gray-600">PNG, JPG, GIF</p>
               </label>
             </div>
 
             {uploadedFiles.length > 0 && (
               <div className="mt-4">
                 <h3 className="font-semibold mb-2">Uploaded Files ({uploadedFiles.length})</h3>
+                <p className="text-sm text-gray-600 mb-2">Total size: {formatFileSize(getTotalFileSize())}</p>
                 <div className="space-y-2">
                   {uploadedFiles.map((file, index) => (
                     <div key={index} className="flex justify-between items-center bg-gray-50 p-3 rounded">
-                      <span className="text-sm text-gray-700">{file.name}</span>
+                      <span className="text-sm text-gray-700">{file.name} ({formatFileSize(file.size)})</span>
                       <button
                         type="button"
                         onClick={() => removeFile(index)}
