@@ -79,7 +79,7 @@ export async function POST(
       try {
         const resend = new Resend(process.env.RESEND_API_KEY);
         const result = await resend.emails.send({
-          from: 'estimates@thehearthhollow.com',
+          from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
           to: quote.customer?.email || '',
           subject: `Your Project Estimate - Reference #${quote.id}`,
           html: emailHtml,
