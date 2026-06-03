@@ -43,34 +43,37 @@ export async function POST(
       );
     }
 
-    console.log(`Analyzing quote ${params.id}...`);
-    console.log(`API Key available: ${!!process.env.ANTHROPIC_API_KEY}`);
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`[ROUTE] Analyzing quote ${params.id}`);
+    console.log(`[ROUTE] API Key present: ${!!process.env.ANTHROPIC_API_KEY}`);
+    console.log(`${'='.repeat(80)}\n`);
 
     // Analyze with Claude
     let analysis: any;
     try {
+      console.log(`[ROUTE] Calling analyzeWithClaude...`);
       analysis = await analyzeWithClaude(quote, quote.uploadedAssets || []);
+      console.log(`[ROUTE] ✅ Claude analysis succeeded`);
     } catch (claudeError) {
-      console.error('Claude analysis failed:', claudeError);
+      console.error(`[ROUTE] ❌ Claude analysis FAILED`);
+      console.error(`[ROUTE] Error type:`, claudeError instanceof Error ? claudeError.constructor.name : typeof claudeError);
+      console.error(`[ROUTE] Error message:`, claudeError instanceof Error ? claudeError.message : String(claudeError));
+      if (claudeError instanceof Error && claudeError.stack) {
+        console.error(`[ROUTE] Stack:`, claudeError.stack);
+      }
       
-      // Fallback: Generate a basic estimate without Claude
-      console.log('Generating fallback estimate...');
-      analysis = {
-        scope: quote.description.substring(0, 100),
-        complexity: 5,
-        estimatedLabor: { hours: 8, rate: 60 },
-        materials: [],
-        travel: 35,
-        overhead: 100,
-        profitMargin: 0.25,
-        lowEstimate: 800,
-        expectedEstimate: 1100,
-        highEstimate: 1500,
-        confidence: 0.3,
-        breakdown: `Project: ${quote.category}\nDescription: ${quote.description}\n\nEstimate ranges from $800-$1500. Please review photos and adjust as needed.`,
-        fullAnalysis: 'Fallback estimate - Claude API not available',
-      };
+      // DO NOT USE FALLBACK - FAIL SO WE CAN SEE THE ERROR
+      return NextResponse.json(
+        { 
+          error: 'Claude analysis failed',
+          details: claudeError instanceof Error ? claudeError.message : String(claudeError),
+          suggestion: 'Check that ANTHROPIC_API_KEY is set in Vercel environment variables'
+        },
+        { status: 500 }
+      );
     }
+
+    console.log(`[ROUTE] Saving estimate to database...`);
 
     // Save estimate
     const estimate = await prisma.estimate.upsert({
@@ -94,6 +97,8 @@ export async function POST(
       },
     });
 
+    console.log(`[ROUTE] ✅ Estimate saved`);
+
     // Update project status
     const updated = await prisma.projectRequest.update({
       where: { id: params.id },
@@ -105,10 +110,13 @@ export async function POST(
       },
     });
 
-    console.log(`Quote ${params.id} analyzed successfully`);
+    console.log(`[ROUTE] ✅ Quote ${params.id} analyzed successfully`);
+    console.log(`[ROUTE] Estimates - Low: $${analysis.lowEstimate}, Expected: $${analysis.expectedEstimate}, High: $${analysis.highEstimate}`);
+    console.log(`${'='.repeat(80)}\n`);
+
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error analyzing quote:', error);
+    console.error(`[ROUTE] Unexpected error:`, error);
     return NextResponse.json(
       { 
         error: 'Failed to analyze quote',

@@ -1,83 +1,72 @@
 import Anthropic from "@anthropic-ai/sdk";
 
+console.log("[Init] Claude API Key available:", !!process.env.ANTHROPIC_API_KEY);
+
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-export interface ProjectAnalysis {
-  scope: string;
-  complexity: number;
-  estimatedLabor: { hours: number; rate: number };
-  materials: Array<{ item: string; qty: number; unitCost: number; total: number }>;
-  travel: number;
-  overhead: number;
-  profitMargin: number;
-  estimates: { low: number; expected: number; high: number };
-  confidence: number;
-  flagsAndRisks: string[];
-  recommendedNextStep: string;
-}
+export async function analyzeWithClaude(
+  quote: any,
+  uploadedAssets: any[]
+): Promise<any> {
+  console.log(`\n[ANALYZE] Starting analysis for quote ${quote.id}`);
+  console.log(`[ANALYZE] Category: ${quote.category}`);
+  console.log(`[ANALYZE] Description: ${quote.description.substring(0, 60)}`);
+  console.log(`[ANALYZE] Assets: ${uploadedAssets.length}`);
 
-export async function analyzeProject(
-  description: string,
-  imageUrls: string[],
-  projectId?: string
-): Promise<ProjectAnalysis> {
-  console.log(`[Claude] Analyzing project ${projectId}: ${description.substring(0, 50)}...`);
+  // Build the message
+  const messageContent: any[] = [];
 
-  const imageContent: any[] = [];
-  
-  if (imageUrls && imageUrls.length > 0) {
-    for (const url of imageUrls) {
-      if (url) {
-        imageContent.push({
-          type: "image" as const,
+  // Add images if available
+  if (uploadedAssets && uploadedAssets.length > 0) {
+    for (const asset of uploadedAssets) {
+      const imageUrl = asset.url || asset.s3Url;
+      if (imageUrl && typeof imageUrl === "string") {
+        console.log(`[ANALYZE] Adding image: ${imageUrl.substring(0, 50)}`);
+        messageContent.push({
+          type: "image",
           source: {
-            type: "url" as const,
-            url: url,
+            type: "url",
+            url: imageUrl,
           },
         });
       }
     }
   }
 
-  // SIMPLIFIED PROMPT - Forces Claude to return specific numbers
-  const textContent = {
-    type: "text" as const,
-    text: `You are a handyman estimator. Analyze this project and return ONLY a JSON object with cost estimates.
+  // Add text prompt
+  const prompt = `You are a professional handyman estimator with 15+ years of experience.
 
-PROJECT: ${description}
+Analyze this project request and provide specific cost estimates.
 
-INSTRUCTIONS:
-- Return ONLY valid JSON (no markdown, no explanation)
-- Each project must have DIFFERENT estimates based on the description
-- Complexity: rate 1-10 based on this specific project
-- low_estimate: minimum cost for THIS project
-- expected_estimate: most likely cost for THIS project  
-- high_estimate: maximum cost for THIS project
-- These MUST be different numbers for different projects, not formulas
+**CATEGORY:** ${quote.category}
+**DESCRIPTION:** ${quote.description}
 
-RESPOND WITH ONLY THIS JSON STRUCTURE:
+Respond with ONLY this JSON structure (no markdown, no explanation):
 {
-  "complexity": <1-10 number based on project>,
-  "low_estimate": <number>,
-  "expected_estimate": <number>,
-  "high_estimate": <number>,
-  "scope": "<what needs to be done>",
-  "risk_factors": ["<specific risk>"]
+  "low_estimate": <integer dollar amount>,
+  "expected_estimate": <integer dollar amount>,
+  "high_estimate": <integer dollar amount>,
+  "complexity": <1-10>,
+  "scope_summary": "<what will be done>",
+  "key_risks": ["<specific risk>"]
 }
 
-Respond with ONLY the JSON object, nothing else.`,
-  };
+Example format:
+{"low_estimate": 450, "expected_estimate": 650, "high_estimate": 950, "complexity": 5, "scope_summary": "Build custom dining table from reclaimed wood", "key_risks": ["Wood sourcing may add 1-2 weeks", "Finish quality varies by available materials"]}`;
 
-  const messageContent = imageContent.length > 0 
-    ? [...imageContent, textContent]
-    : [textContent];
+  messageContent.push({
+    type: "text",
+    text: prompt,
+  });
+
+  console.log(`[ANALYZE] Calling Claude API with ${messageContent.length} content blocks`);
 
   try {
     const response = await client.messages.create({
       model: "claude-3-5-sonnet-20241022",
-      max_tokens: 1000,
+      max_tokens: 500,
       messages: [
         {
           role: "user",
@@ -89,100 +78,78 @@ Respond with ONLY the JSON object, nothing else.`,
     const responseText =
       response.content[0].type === "text" ? response.content[0].text : "";
 
-    console.log(`[Claude] Raw response: ${responseText.substring(0, 200)}`);
+    console.log(`[ANALYZE] Claude response (first 200 chars):`);
+    console.log(`[ANALYZE] ${responseText.substring(0, 200)}`);
 
-    // Parse JSON
+    // Parse the JSON
     let jsonStr = responseText.trim();
-    
-    // Remove markdown if present
+
+    // Remove markdown code blocks if present
     if (jsonStr.includes("```json")) {
       jsonStr = jsonStr.split("```json")[1].split("```")[0].trim();
     } else if (jsonStr.includes("```")) {
       jsonStr = jsonStr.split("```")[1].split("```")[0].trim();
     }
 
-    // Extract JSON
+    // Extract JSON object
     const jsonStart = jsonStr.indexOf("{");
     const jsonEnd = jsonStr.lastIndexOf("}");
-    if (jsonStart !== -1 && jsonEnd !== -1) {
-      jsonStr = jsonStr.substring(jsonStart, jsonEnd + 1);
+
+    if (jsonStart === -1 || jsonEnd === -1) {
+      console.error(`[ANALYZE] ERROR: No JSON found in response`);
+      console.error(`[ANALYZE] Full response: ${responseText}`);
+      throw new Error("Claude did not return valid JSON");
     }
 
+    jsonStr = jsonStr.substring(jsonStart, jsonEnd + 1);
     const parsed = JSON.parse(jsonStr);
-    
-    const low = parseInt(parsed.low_estimate) || parseInt(parsed.lowEstimate) || 0;
-    const expected = parseInt(parsed.expected_estimate) || parseInt(parsed.expectedEstimate) || 0;
-    const high = parseInt(parsed.high_estimate) || parseInt(parsed.highEstimate) || 0;
-    
-    console.log(`[Claude] Parsed - Low: $${low}, Expected: $${expected}, High: $${high}`);
 
-    // If Claude didn't return good estimates, log it
-    if (low === 0 || expected === 0 || high === 0) {
-      console.warn(`[Claude] WARNING: Claude returned zero estimates! Full response: ${responseText}`);
+    console.log(`[ANALYZE] Parsed estimates:`);
+    console.log(`[ANALYZE]   Low: $${parsed.low_estimate}`);
+    console.log(`[ANALYZE]   Expected: $${parsed.expected_estimate}`);
+    console.log(`[ANALYZE]   High: $${parsed.high_estimate}`);
+    console.log(`[ANALYZE]   Complexity: ${parsed.complexity}`);
+
+    // Validate we got numbers
+    const low = parseInt(parsed.low_estimate);
+    const expected = parseInt(parsed.expected_estimate);
+    const high = parseInt(parsed.high_estimate);
+
+    if (isNaN(low) || isNaN(expected) || isNaN(high)) {
+      console.error(`[ANALYZE] ERROR: Estimates are not valid numbers`);
+      throw new Error("Invalid estimate values");
     }
 
+    // Return in legacy format
     return {
-      scope: parsed.scope || description.substring(0, 100),
-      complexity: Math.max(1, Math.min(10, parsed.complexity || 5)),
-      estimatedLabor: {
-        hours: Math.max(1, low > 0 ? Math.round(expected / 65) : 4),
-        rate: 65,
-      },
-      materials: [],
-      travel: 35,
-      overhead: Math.max(50, Math.round(expected * 0.1)),
-      profitMargin: 0.25,
-      estimates: {
-        low: Math.max(100, low),
-        expected: Math.max(200, expected),
-        high: Math.max(300, high),
-      },
-      confidence: 0.7,
-      flagsAndRisks: parsed.risk_factors || [],
-      recommendedNextStep: "Review estimate and confirm details",
+      lowEstimate: low,
+      expectedEstimate: expected,
+      highEstimate: high,
+      complexity: parsed.complexity || 5,
+      scope: parsed.scope_summary || quote.description.substring(0, 100),
+      breakdown: `
+**Project:** ${quote.category}
+**Description:** ${quote.description}
+
+**Complexity:** ${parsed.complexity || 5}/10
+
+**Estimates:**
+- Low: $${low}
+- Expected: $${expected}
+- High: $${high}
+
+**Key Risks:**
+${(parsed.key_risks || []).map((r: string) => `- ${r}`).join("\n") || "None identified"}
+
+**Recommendation:** Review estimate and contact customer for confirmation.`,
+      confidence: 0.8,
+      fullAnalysis: JSON.stringify(parsed, null, 2),
     };
   } catch (error) {
-    console.error(`[Claude] ERROR:`, error);
-    throw error;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`[ANALYZE] ERROR: ${errorMessage}`);
+    console.error(`[ANALYZE] Stack:`, error instanceof Error ? error.stack : "");
+
+    throw error; // Let the route handler catch this
   }
-}
-
-export async function analyzeWithClaude(
-  quote: any,
-  uploadedAssets: any[]
-): Promise<any> {
-  const imageUrls = uploadedAssets
-    .map((asset: any) => asset.url || asset.s3Url)
-    .filter((url: any) => !!url);
-
-  const analysis = await analyzeProject(
-    quote.description,
-    imageUrls,
-    quote.id
-  );
-
-  return {
-    scope: analysis.scope,
-    complexity: analysis.complexity,
-    estimatedLabor: analysis.estimatedLabor,
-    materials: analysis.materials,
-    travel: analysis.travel,
-    overhead: analysis.overhead,
-    profitMargin: analysis.profitMargin,
-    lowEstimate: analysis.estimates.low,
-    expectedEstimate: analysis.estimates.expected,
-    highEstimate: analysis.estimates.high,
-    confidence: analysis.confidence,
-    breakdown: `
-**Scope:** ${analysis.scope}
-**Complexity:** ${analysis.complexity}/10
-**Estimates:**
-- Low: $${analysis.estimates.low}
-- Expected: $${analysis.estimates.expected}
-- High: $${analysis.estimates.high}
-
-**Risks:** ${analysis.flagsAndRisks.join(", ") || "None identified"}
-    `,
-    fullAnalysis: JSON.stringify(analysis, null, 2),
-  };
 }
