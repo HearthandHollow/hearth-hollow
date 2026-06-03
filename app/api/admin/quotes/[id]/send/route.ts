@@ -3,8 +3,6 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 async function isAuthenticated(req: NextRequest) {
   const cookieStore = await cookies();
   return cookieStore.get('admin_session')?.value === 'authenticated';
@@ -51,6 +49,9 @@ export async function POST(
       );
     }
 
+    console.log(`Sending estimate for quote ${params.id} to ${quote.customer?.email}`);
+    console.log(`Resend API Key available: ${!!process.env.RESEND_API_KEY}`);
+
     // Send email with estimate
     const emailHtml = `
       <h2>Your Project Estimate</h2>
@@ -71,14 +72,34 @@ export async function POST(
       <p>Best regards,<br/>The Hearth & Hollow Team</p>
     `;
 
-    await resend.emails.send({
-      from: 'estimates@thehearthhollow.com',
-      to: quote.customer?.email || '',
-      subject: `Your Project Estimate - Reference #${quote.id}`,
-      html: emailHtml,
-    });
+    let emailSent = false;
+    let emailError: string | null = null;
 
-    // Update status
+    if (process.env.RESEND_API_KEY) {
+      try {
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        const result = await resend.emails.send({
+          from: 'estimates@thehearthhollow.com',
+          to: quote.customer?.email || '',
+          subject: `Your Project Estimate - Reference #${quote.id}`,
+          html: emailHtml,
+        });
+        
+        console.log('Email send result:', result);
+        emailSent = !result.error;
+        if (result.error) {
+          emailError = result.error.message;
+        }
+      } catch (resendError) {
+        console.error('Resend error:', resendError);
+        emailError = resendError instanceof Error ? resendError.message : String(resendError);
+      }
+    } else {
+      console.warn('Resend API key not configured');
+      emailError = 'Email service not configured';
+    }
+
+    // Update status regardless of email result
     const updated = await prisma.projectRequest.update({
       where: { id: params.id },
       data: { status: 'sent' },
@@ -88,11 +109,27 @@ export async function POST(
       },
     });
 
-    return NextResponse.json(updated);
+    // Return success even if email failed (at least the quote is marked as sent)
+    if (emailSent) {
+      console.log(`Email sent successfully for quote ${params.id}`);
+      return NextResponse.json(updated);
+    } else {
+      console.warn(`Email failed for quote ${params.id}: ${emailError}`);
+      return NextResponse.json(
+        { 
+          ...updated,
+          warning: `Quote marked as sent, but email delivery may have failed: ${emailError}`
+        },
+        { status: 200 }
+      );
+    }
   } catch (error) {
     console.error('Error sending estimate:', error);
     return NextResponse.json(
-      { error: 'Failed to send estimate' },
+      { 
+        error: 'Failed to send estimate',
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     );
   }
