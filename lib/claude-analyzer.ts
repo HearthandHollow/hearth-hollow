@@ -6,14 +6,14 @@ const client = new Anthropic({
 
 export interface ProjectAnalysis {
   scope: string;
-  complexity: number; // 1-10
+  complexity: number;
   estimatedLabor: { hours: number; rate: number };
   materials: Array<{ item: string; qty: number; unitCost: number; total: number }>;
   travel: number;
   overhead: number;
   profitMargin: number;
   estimates: { low: number; expected: number; high: number };
-  confidence: number; // 0-1
+  confidence: number;
   flagsAndRisks: string[];
   recommendedNextStep: string;
 }
@@ -23,14 +23,10 @@ export async function analyzeProject(
   imageUrls: string[],
   projectId?: string
 ): Promise<ProjectAnalysis> {
-  console.log(`[Claude Analyzer] Starting analysis for project ${projectId}`);
-  console.log(`[Claude Analyzer] Description: ${description.substring(0, 100)}...`);
-  console.log(`[Claude Analyzer] Images: ${imageUrls.length}`);
-  
-  // Build message with vision
+  console.log(`[Claude] Analyzing project ${projectId}: ${description.substring(0, 50)}...`);
+
   const imageContent: any[] = [];
   
-  // Add images if available
   if (imageUrls && imageUrls.length > 0) {
     for (const url of imageUrls) {
       if (url) {
@@ -45,138 +41,125 @@ export async function analyzeProject(
     }
   }
 
+  // SIMPLIFIED PROMPT - Forces Claude to return specific numbers
   const textContent = {
     type: "text" as const,
-    text: `You are an expert handyman and project estimator with 15+ years of experience. 
+    text: `You are a handyman estimator. Analyze this project and return ONLY a JSON object with cost estimates.
 
-CRITICAL: This is project ID: ${projectId}
-Generate COMPLETELY UNIQUE estimates for EACH project.
-DO NOT return default estimates.
-VARY your estimates significantly based on the project description provided.
+PROJECT: ${description}
 
-PROJECT DETAILS:
-Category: ${description}
+INSTRUCTIONS:
+- Return ONLY valid JSON (no markdown, no explanation)
+- Each project must have DIFFERENT estimates based on the description
+- Complexity: rate 1-10 based on this specific project
+- low_estimate: minimum cost for THIS project
+- expected_estimate: most likely cost for THIS project  
+- high_estimate: maximum cost for THIS project
+- These MUST be different numbers for different projects, not formulas
 
-${imageUrls && imageUrls.length > 0 ? `Images: ${imageUrls.length} provided` : "NO IMAGES PROVIDED"}
-
-Analyze THIS SPECIFIC project and return UNIQUE estimates. Not generic estimates.
-
-Respond with ONLY valid JSON (no markdown, no explanation):
+RESPOND WITH ONLY THIS JSON STRUCTURE:
 {
-  "scope": "Specific work needed for THIS project",
-  "complexity": <number 1-10>,
-  "estimatedLabor": {"hours": <number>, "rate": <50-75>},
-  "materials": [{"item": "<specific item>", "qty": <number>, "unitCost": <number>, "total": <number>}],
-  "travel": <25-50>,
-  "overhead": <number>,
-  "profitMargin": <0.25-0.35>,
-  "estimates": {"low": <number>, "expected": <number>, "high": <number>},
-  "confidence": <0-1>,
-  "flagsAndRisks": ["<specific concern>"],
-  "recommendedNextStep": "<specific next action>"
-}`,
+  "complexity": <1-10 number based on project>,
+  "low_estimate": <number>,
+  "expected_estimate": <number>,
+  "high_estimate": <number>,
+  "scope": "<what needs to be done>",
+  "risk_factors": ["<specific risk>"]
+}
+
+Respond with ONLY the JSON object, nothing else.`,
   };
 
   const messageContent = imageContent.length > 0 
     ? [...imageContent, textContent]
     : [textContent];
 
-  console.log(`[Claude Analyzer] Calling Claude API...`);
-  
-  const response = await client.messages.create({
-    model: "claude-3-5-sonnet-20241022",
-    max_tokens: 2000,
-    messages: [
-      {
-        role: "user",
-        content: messageContent as any,
+  try {
+    const response = await client.messages.create({
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 1000,
+      messages: [
+        {
+          role: "user",
+          content: messageContent as any,
+        },
+      ],
+    });
+
+    const responseText =
+      response.content[0].type === "text" ? response.content[0].text : "";
+
+    console.log(`[Claude] Raw response: ${responseText.substring(0, 200)}`);
+
+    // Parse JSON
+    let jsonStr = responseText.trim();
+    
+    // Remove markdown if present
+    if (jsonStr.includes("```json")) {
+      jsonStr = jsonStr.split("```json")[1].split("```")[0].trim();
+    } else if (jsonStr.includes("```")) {
+      jsonStr = jsonStr.split("```")[1].split("```")[0].trim();
+    }
+
+    // Extract JSON
+    const jsonStart = jsonStr.indexOf("{");
+    const jsonEnd = jsonStr.lastIndexOf("}");
+    if (jsonStart !== -1 && jsonEnd !== -1) {
+      jsonStr = jsonStr.substring(jsonStart, jsonEnd + 1);
+    }
+
+    const parsed = JSON.parse(jsonStr);
+    
+    const low = parseInt(parsed.low_estimate) || parseInt(parsed.lowEstimate) || 0;
+    const expected = parseInt(parsed.expected_estimate) || parseInt(parsed.expectedEstimate) || 0;
+    const high = parseInt(parsed.high_estimate) || parseInt(parsed.highEstimate) || 0;
+    
+    console.log(`[Claude] Parsed - Low: $${low}, Expected: $${expected}, High: $${high}`);
+
+    // If Claude didn't return good estimates, log it
+    if (low === 0 || expected === 0 || high === 0) {
+      console.warn(`[Claude] WARNING: Claude returned zero estimates! Full response: ${responseText}`);
+    }
+
+    return {
+      scope: parsed.scope || description.substring(0, 100),
+      complexity: Math.max(1, Math.min(10, parsed.complexity || 5)),
+      estimatedLabor: {
+        hours: Math.max(1, low > 0 ? Math.round(expected / 65) : 4),
+        rate: 65,
       },
-    ],
-  });
-
-  // Extract JSON from response
-  const responseText =
-    response.content[0].type === "text" ? response.content[0].text : "";
-
-  console.log(`[Claude Analyzer] Raw response: ${responseText.substring(0, 200)}...`);
-
-  // Parse JSON - be strict and handle various formats
-  let jsonStr = responseText.trim();
-  
-  // Remove markdown code blocks if present
-  if (jsonStr.includes("```json")) {
-    jsonStr = jsonStr.split("```json")[1].split("```")[0].trim();
-  } else if (jsonStr.includes("```")) {
-    jsonStr = jsonStr.split("```")[1].split("```")[0].trim();
+      materials: [],
+      travel: 35,
+      overhead: Math.max(50, Math.round(expected * 0.1)),
+      profitMargin: 0.25,
+      estimates: {
+        low: Math.max(100, low),
+        expected: Math.max(200, expected),
+        high: Math.max(300, high),
+      },
+      confidence: 0.7,
+      flagsAndRisks: parsed.risk_factors || [],
+      recommendedNextStep: "Review estimate and confirm details",
+    };
+  } catch (error) {
+    console.error(`[Claude] ERROR:`, error);
+    throw error;
   }
-
-  // Find JSON object boundaries
-  const jsonStart = jsonStr.indexOf("{");
-  const jsonEnd = jsonStr.lastIndexOf("}");
-  if (jsonStart !== -1 && jsonEnd !== -1) {
-    jsonStr = jsonStr.substring(jsonStart, jsonEnd + 1);
-  }
-
-  // Parse JSON
-  const parsed = JSON.parse(jsonStr);
-
-  console.log(`[Claude Analyzer] Parsed estimates - Low: ${parsed.estimates?.low}, Expected: ${parsed.estimates?.expected}, High: ${parsed.estimates?.high}`);
-
-  // Validate and return with defaults
-  return {
-    scope: parsed.scope || "Project analysis required",
-    complexity: Math.max(1, Math.min(10, parseInt(parsed.complexity) || 5)),
-    estimatedLabor: {
-      hours: Math.max(0.5, parseFloat(parsed.estimatedLabor?.hours) || 4),
-      rate: Math.max(30, parseFloat(parsed.estimatedLabor?.rate) || 60),
-    },
-    materials: Array.isArray(parsed.materials) ? parsed.materials : [],
-    travel: Math.max(0, parseFloat(parsed.travel) || 35),
-    overhead: Math.max(0, parseFloat(parsed.overhead) || 100),
-    profitMargin: Math.max(0.1, Math.min(0.5, parseFloat(parsed.profitMargin) || 0.3)),
-    estimates: {
-      low: Math.max(100, parseFloat(parsed.estimates?.low) || 800),
-      expected: Math.max(200, parseFloat(parsed.estimates?.expected) || 1200),
-      high: Math.max(300, parseFloat(parsed.estimates?.high) || 1600),
-    },
-    confidence: Math.max(0, Math.min(1, parseFloat(parsed.confidence) || 0.5)),
-    flagsAndRisks: Array.isArray(parsed.flagsAndRisks) ? parsed.flagsAndRisks : [],
-    recommendedNextStep: parsed.recommendedNextStep || "Schedule site visit for exact measurements",
-  };
 }
 
-// Legacy wrapper function for API route compatibility
 export async function analyzeWithClaude(
   quote: any,
   uploadedAssets: any[]
 ): Promise<any> {
-  console.log(`[analyzeWithClaude] Processing quote ${quote.id}`);
-  console.log(`[analyzeWithClaude] Category: ${quote.category}`);
-  console.log(`[analyzeWithClaude] Description: ${quote.description}`);
-  
-  // Extract image URLs from uploaded assets
   const imageUrls = uploadedAssets
     .map((asset: any) => asset.url || asset.s3Url)
     .filter((url: any) => !!url);
 
-  console.log(`[analyzeWithClaude] Found ${imageUrls.length} images`);
-
-  // Call the new analyzeProject function
   const analysis = await analyzeProject(
     quote.description,
     imageUrls,
     quote.id
   );
-
-  console.log(`[analyzeWithClaude] Final estimates - Low: ${analysis.estimates.low}, Expected: ${analysis.estimates.expected}, High: ${analysis.estimates.high}`);
-
-  // Transform to legacy format expected by the API route
-  // Use Claude's estimates directly (they're already calculated and unique per project)
-  const materialsCost = analysis.materials.reduce(
-    (sum: number, m: any) => sum + (m.total || 0),
-    0
-  );
-  const laborCost = analysis.estimatedLabor.hours * analysis.estimatedLabor.rate;
 
   return {
     scope: analysis.scope,
@@ -186,27 +169,19 @@ export async function analyzeWithClaude(
     travel: analysis.travel,
     overhead: analysis.overhead,
     profitMargin: analysis.profitMargin,
-    lowEstimate: Math.round(analysis.estimates.low),
-    expectedEstimate: Math.round(analysis.estimates.expected),
-    highEstimate: Math.round(analysis.estimates.high),
+    lowEstimate: analysis.estimates.low,
+    expectedEstimate: analysis.estimates.expected,
+    highEstimate: analysis.estimates.high,
     confidence: analysis.confidence,
     breakdown: `
-**Project Scope:** ${analysis.scope}
-
+**Scope:** ${analysis.scope}
 **Complexity:** ${analysis.complexity}/10
+**Estimates:**
+- Low: $${analysis.estimates.low}
+- Expected: $${analysis.estimates.expected}
+- High: $${analysis.estimates.high}
 
-**Materials:**
-${analysis.materials.map((m: any) => `- ${m.item}: $${m.total || 0}`).join("\n") || "None specified"}
-
-**Labor:** ${analysis.estimatedLabor.hours} hours @ $${analysis.estimatedLabor.rate}/hr = $${laborCost}
-**Travel:** $${analysis.travel}
-**Overhead:** $${analysis.overhead}
-
-**Risks & Flags:**
-${analysis.flagsAndRisks.map((f: any) => `- ${f}`).join("\n") || "None identified"}
-
-**Next Steps:**
-${analysis.recommendedNextStep}
+**Risks:** ${analysis.flagsAndRisks.join(", ") || "None identified"}
     `,
     fullAnalysis: JSON.stringify(analysis, null, 2),
   };
