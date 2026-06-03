@@ -23,6 +23,10 @@ export async function analyzeProject(
   imageUrls: string[],
   projectId?: string
 ): Promise<ProjectAnalysis> {
+  console.log(`[Claude Analyzer] Starting analysis for project ${projectId}`);
+  console.log(`[Claude Analyzer] Description: ${description.substring(0, 100)}...`);
+  console.log(`[Claude Analyzer] Images: ${imageUrls.length}`);
+  
   // Build message with vision
   const imageContent: any[] = [];
   
@@ -44,58 +48,32 @@ export async function analyzeProject(
   const textContent = {
     type: "text" as const,
     text: `You are an expert handyman and project estimator with 15+ years of experience. 
-    
-CRITICAL: This is project #${projectId || "unknown"}. Generate COMPLETELY UNIQUE estimates for each project based on the actual details provided. NEVER return the same estimate twice.
 
-PROJECT DESCRIPTION:
-${description}
+CRITICAL: This is project ID: ${projectId}
+Generate COMPLETELY UNIQUE estimates for EACH project.
+DO NOT return default estimates.
+VARY your estimates significantly based on the project description provided.
 
-${imageUrls && imageUrls.length > 0 ? `Images provided: ${imageUrls.length} photo(s)` : "No photos provided"}
+PROJECT DETAILS:
+Category: ${description}
 
-Based on the provided images and description, generate a detailed, UNIQUE JSON response with:
+${imageUrls && imageUrls.length > 0 ? `Images: ${imageUrls.length} provided` : "NO IMAGES PROVIDED"}
 
-1. **Scope**: Detailed summary of exactly what needs to be done for THIS project (not generic)
-2. **Complexity**: Rate 1-10 based on THIS specific project (1=trivial, 10=extremely complex)
-3. **EstimatedLabor**: Specific hours and hourly rate for THIS project (use $50-75/hr base)
-4. **Materials**: Specific items needed for THIS project (not generic - include actual quantities and costs)
-5. **Travel**: Estimate based on described location (usually $25-50)
-6. **Overhead**: 15% of labor subtotal (for business operations)
-7. **ProfitMargin**: 0.25-0.35 (25-35% of total cost)
-8. **Estimates**: 
-   - low: minimum cost (if everything goes perfectly)
-   - expected: most likely cost
-   - high: maximum cost (if complications arise)
-   MUST VARY SIGNIFICANTLY based on project complexity and unknowns
-9. **Confidence**: 0-1 score (1.0 = very clear, 0.0 = very unclear)
-   - Lower if photos are blurry or description is vague
-   - Higher if photos are clear and description is detailed
-10. **FlagsAndRisks**: Array of specific concerns for THIS project (not generic)
-    - Example: "Foundation appears uneven - may need leveling"
-    - Example: "Old plumbing may require replacement"
-    - Be specific to what you see/infer
-11. **RecommendedNextStep**: Specific next action for THIS project
-    - Example: "Site visit needed to measure exactly"
-    - Example: "Send additional photos of corner damage"
+Analyze THIS SPECIFIC project and return UNIQUE estimates. Not generic estimates.
 
-RESPOND WITH ONLY VALID JSON - NO MARKDOWN CODE BLOCKS, NO EXPLANATION TEXT, NO EXTRA COMMENTARY.
-Start immediately with "{" and end with "}"
-
-EXAMPLE FORMAT (but generate unique data for each project):
+Respond with ONLY valid JSON (no markdown, no explanation):
 {
-  "scope": "Replace worn kitchen faucet, caulk around sink, fix cabinet hinge",
-  "complexity": 3,
-  "estimatedLabor": {"hours": 3, "rate": 60},
-  "materials": [
-    {"item": "Faucet (mid-range)", "qty": 1, "unitCost": 150, "total": 150},
-    {"item": "Caulk & supplies", "qty": 1, "unitCost": 20, "total": 20}
-  ],
-  "travel": 35,
-  "overhead": 27,
-  "profitMargin": 0.30,
-  "estimates": {"low": 350, "expected": 450, "high": 550},
-  "confidence": 0.85,
-  "flagsAndRisks": ["Check water pressure after install", "Old sink may have corrosion"],
-  "recommendedNextStep": "Send photo of current faucet installation"
+  "scope": "Specific work needed for THIS project",
+  "complexity": <number 1-10>,
+  "estimatedLabor": {"hours": <number>, "rate": <50-75>},
+  "materials": [{"item": "<specific item>", "qty": <number>, "unitCost": <number>, "total": <number>}],
+  "travel": <25-50>,
+  "overhead": <number>,
+  "profitMargin": <0.25-0.35>,
+  "estimates": {"low": <number>, "expected": <number>, "high": <number>},
+  "confidence": <0-1>,
+  "flagsAndRisks": ["<specific concern>"],
+  "recommendedNextStep": "<specific next action>"
 }`,
   };
 
@@ -103,6 +81,8 @@ EXAMPLE FORMAT (but generate unique data for each project):
     ? [...imageContent, textContent]
     : [textContent];
 
+  console.log(`[Claude Analyzer] Calling Claude API...`);
+  
   const response = await client.messages.create({
     model: "claude-3-5-sonnet-20241022",
     max_tokens: 2000,
@@ -117,6 +97,8 @@ EXAMPLE FORMAT (but generate unique data for each project):
   // Extract JSON from response
   const responseText =
     response.content[0].type === "text" ? response.content[0].text : "";
+
+  console.log(`[Claude Analyzer] Raw response: ${responseText.substring(0, 200)}...`);
 
   // Parse JSON - be strict and handle various formats
   let jsonStr = responseText.trim();
@@ -137,6 +119,8 @@ EXAMPLE FORMAT (but generate unique data for each project):
 
   // Parse JSON
   const parsed = JSON.parse(jsonStr);
+
+  console.log(`[Claude Analyzer] Parsed estimates - Low: ${parsed.estimates?.low}, Expected: ${parsed.estimates?.expected}, High: ${parsed.estimates?.high}`);
 
   // Validate and return with defaults
   return {
@@ -166,10 +150,16 @@ export async function analyzeWithClaude(
   quote: any,
   uploadedAssets: any[]
 ): Promise<any> {
+  console.log(`[analyzeWithClaude] Processing quote ${quote.id}`);
+  console.log(`[analyzeWithClaude] Category: ${quote.category}`);
+  console.log(`[analyzeWithClaude] Description: ${quote.description}`);
+  
   // Extract image URLs from uploaded assets
   const imageUrls = uploadedAssets
     .map((asset: any) => asset.url || asset.s3Url)
     .filter((url: any) => !!url);
+
+  console.log(`[analyzeWithClaude] Found ${imageUrls.length} images`);
 
   // Call the new analyzeProject function
   const analysis = await analyzeProject(
@@ -177,6 +167,8 @@ export async function analyzeWithClaude(
     imageUrls,
     quote.id
   );
+
+  console.log(`[analyzeWithClaude] Final estimates - Low: ${analysis.estimates.low}, Expected: ${analysis.estimates.expected}, High: ${analysis.estimates.high}`);
 
   // Transform to legacy format expected by the API route
   // Use Claude's estimates directly (they're already calculated and unique per project)

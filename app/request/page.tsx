@@ -60,9 +60,9 @@ export default function RequestPage() {
     setError("");
 
     try {
-      // Validate form
-      if (!formData.name || !formData.email || !formData.phone || !formData.category || !formData.description || uploadedFiles.length === 0) {
-        throw new Error("Please fill in all fields and upload at least one photo");
+      // Validate form (photos are optional)
+      if (!formData.name || !formData.email || !formData.phone || !formData.category || !formData.description) {
+        throw new Error("Please fill in all required fields");
       }
 
       // Create FormData for multipart upload
@@ -194,7 +194,7 @@ export default function RequestPage() {
 
           {/* File Upload */}
           <div className="border-b pb-6">
-            <h2 className="text-lg font-semibold mb-4">Upload Photos</h2>
+            <h2 className="text-lg font-semibold mb-4">Upload Photos <span className="text-sm font-normal text-gray-600">(Optional)</span></h2>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 transition">
               <input
                 type="file"
