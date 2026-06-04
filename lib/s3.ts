@@ -13,6 +13,7 @@ if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     },
   });
+  console.log("[S3] Client initialized");
 }
 
 export async function uploadToS3(
@@ -21,45 +22,56 @@ export async function uploadToS3(
   mimeType: string,
   projectId: string
 ): Promise<string> {
-  // Get bucket name from env or use default
   const bucketName = process.env.AWS_S3_BUCKET || 'hearth-hollow-quotes';
   const region = process.env.AWS_REGION || 'us-east-1';
   
-  // If S3 is not configured, return a placeholder URL
   if (!s3Client) {
-    console.warn("S3 client not initialized, using placeholder URL");
-    return `https://placeholder-bucket.s3.amazonaws.com/projects/${projectId}/${filename}`;
+    console.warn("[S3] Client not initialized");
+    throw new Error("S3 not configured");
   }
 
   const key = `projects/${projectId}/${crypto.randomBytes(8).toString("hex")}-${filename}`;
 
-  const command = new PutObjectCommand({
-    Bucket: bucketName,
-    Key: key,
-    Body: Buffer.from(buffer),
-    ContentType: mimeType,
-  });
+  try {
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+      Body: Buffer.from(buffer),
+      ContentType: mimeType,
+    });
+
+    await s3Client.send(command);
+    console.log("[S3] Uploaded:", key);
+    
+    // Store the key (we'll generate signed URL on retrieval)
+    return key;
+  } catch (error) {
+    console.error("[S3] Upload failed:", error);
+    throw error;
+  }
+}
+
+// Get a signed URL for an uploaded key
+export async function getSignedUrlForKey(key: string): Promise<string> {
+  const bucketName = process.env.AWS_S3_BUCKET || 'hearth-hollow-quotes';
+  
+  if (!s3Client) {
+    throw new Error("S3 not configured");
+  }
 
   try {
-    await s3Client.send(command);
-    
-    // Generate a signed URL that expires in 7 days (604800 seconds)
-    const getCommand = new GetObjectCommand({
+    const command = new GetObjectCommand({
       Bucket: bucketName,
       Key: key,
     });
     
-    const signedUrl = await getSignedUrl(s3Client, getCommand, {
+    const url = await getSignedUrl(s3Client, command, {
       expiresIn: 604800, // 7 days
     });
     
-    console.log(`[S3] Successfully uploaded: ${key}`);
-    console.log(`[S3] Signed URL expires in 7 days`);
-    
-    return signedUrl;
+    return url;
   } catch (error) {
-    console.error("S3 upload error:", error);
-    // Fallback to placeholder if upload fails
-    return `https://placeholder-bucket.s3.amazonaws.com/projects/${projectId}/${filename}`;
+    console.error("[S3] Signed URL failed:", error);
+    throw error;
   }
 }
