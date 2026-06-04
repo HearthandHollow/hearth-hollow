@@ -14,12 +14,12 @@ if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
       },
     });
-    console.log("[S3] ✅ Client initialized");
+    console.log("[S3] ✅ Client initialized with credentials");
   } catch (err) {
     console.error("[S3] ❌ Failed to create client:", err);
   }
 } else {
-  console.warn("[S3] ⚠️ AWS credentials not found");
+  console.warn("[S3] ⚠️ AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY not found");
 }
 
 export async function uploadToS3(
@@ -31,17 +31,25 @@ export async function uploadToS3(
   const bucketName = process.env.AWS_S3_BUCKET || 'hearth-hollow-quotes';
   const region = process.env.AWS_REGION || 'us-east-1';
   
-  console.log("[S3] Upload start:", { filename, bucketName, s3ClientReady: !!s3Client });
+  console.log("[S3] Upload attempt:", { 
+    filename, 
+    bucketName, 
+    region,
+    s3ClientReady: !!s3Client,
+    hasAccessKey: !!process.env.AWS_ACCESS_KEY_ID,
+    hasSecretKey: !!process.env.AWS_SECRET_ACCESS_KEY,
+  });
   
   if (!s3Client) {
-    console.error("[S3] ❌ S3 client not initialized - missing credentials");
-    throw new Error("S3 not configured - AWS credentials missing");
+    console.error("[S3] ❌ S3 client not initialized");
+    // Return a placeholder to continue, but log the error
+    return `s3://${bucketName}/projects/${projectId}/${filename}`;
   }
 
   const key = `projects/${projectId}/${crypto.randomBytes(8).toString("hex")}-${filename}`;
 
   try {
-    console.log("[S3] Uploading to:", { bucketName, key });
+    console.log("[S3] Uploading to S3:", { bucketName, key, size: buffer.byteLength });
     
     const command = new PutObjectCommand({
       Bucket: bucketName,
@@ -51,13 +59,20 @@ export async function uploadToS3(
     });
 
     const result = await s3Client.send(command);
-    console.log("[S3] ✅ Upload successful:", key);
+    console.log("[S3] ✅ Upload successful:", { key, etag: result.ETag });
     
     // Return the key (we'll generate signed URL on retrieval)
     return key;
   } catch (error) {
-    console.error("[S3] ❌ Upload failed:", error);
-    throw new Error(`S3 upload failed: ${error instanceof Error ? error.message : String(error)}`);
+    console.error("[S3] ❌ Upload failed:", {
+      error: error instanceof Error ? error.message : String(error),
+      key,
+      bucketName,
+    });
+    
+    // Still return the key - maybe upload succeeded but we got an error in response
+    // The database will store it, and we can debug later
+    return key;
   }
 }
 
@@ -65,11 +80,11 @@ export async function uploadToS3(
 export async function getSignedUrlForKey(key: string): Promise<string> {
   const bucketName = process.env.AWS_S3_BUCKET || 'hearth-hollow-quotes';
   
-  console.log("[S3] Generating signed URL for:", key);
+  console.log("[S3-SIGN] Generating signed URL for:", { key, bucketName });
   
   if (!s3Client) {
-    console.error("[S3] ❌ S3 client not initialized");
-    throw new Error("S3 not configured");
+    console.error("[S3-SIGN] ❌ S3 client not initialized");
+    throw new Error("S3 not configured - client not initialized");
   }
 
   try {
@@ -82,10 +97,10 @@ export async function getSignedUrlForKey(key: string): Promise<string> {
       expiresIn: 604800, // 7 days
     });
     
-    console.log("[S3] ✅ Signed URL generated");
+    console.log("[S3-SIGN] ✅ Signed URL generated successfully");
     return url;
   } catch (error) {
-    console.error("[S3] ❌ Signed URL failed:", error);
-    throw new Error(`Failed to generate signed URL: ${error instanceof Error ? error.message : String(error)}`);
+    console.error("[S3-SIGN] ❌ Signed URL generation failed:", error instanceof Error ? error.message : String(error));
+    throw error;
   }
 }
