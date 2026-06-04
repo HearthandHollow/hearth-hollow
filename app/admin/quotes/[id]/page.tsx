@@ -33,12 +33,22 @@ interface Quote {
   };
 }
 
+interface AssetWithSignedUrl {
+  id: string;
+  filename: string;
+  s3Url: string;
+  mimeType: string;
+  signedUrl?: string;
+  signedUrlError?: string;
+}
+
 export default function QuoteDetailPage() {
   const params = useParams();
   const router = useRouter();
   const quoteId = params.id as string;
 
   const [quote, setQuote] = useState<Quote | null>(null);
+  const [assetsWithUrls, setAssetsWithUrls] = useState<AssetWithSignedUrl[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
@@ -64,9 +74,6 @@ export default function QuoteDetailPage() {
       }
       if (!response.ok) throw new Error('Failed to fetch quote');
       const data = await response.json();
-      console.log('[QUOTE-DEBUG]', 'Loaded quote:', quoteId);
-      console.log('[ASSETS-DEBUG]', 'Assets count:', data.uploadedAssets?.length || 0);
-      console.log('[ASSETS-DEBUG]', 'Asset details:', data.uploadedAssets);
       setQuote(data);
       setEditData({
         description: data.description,
@@ -74,6 +81,33 @@ export default function QuoteDetailPage() {
         location: data.location,
         timeline: data.timeline,
       });
+      
+      // Generate signed URLs for assets
+      if (data.uploadedAssets && data.uploadedAssets.length > 0) {
+        const withUrls = await Promise.all(
+          data.uploadedAssets.map(async (asset: any) => {
+            try {
+              const signResponse = await fetch(`/api/admin/quotes/${quoteId}/get-signed-url`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ s3Key: asset.s3Url }),
+              });
+              
+              if (signResponse.ok) {
+                const { signedUrl } = await signResponse.json();
+                return { ...asset, signedUrl };
+              } else {
+                return { ...asset, signedUrlError: 'Failed to generate signed URL' };
+              }
+            } catch (err) {
+              console.error('Error generating signed URL:', err);
+              return { ...asset, signedUrlError: String(err) };
+            }
+          })
+        );
+        
+        setAssetsWithUrls(withUrls);
+      }
     } catch (err) {
       setError('Failed to load quote');
     } finally {
@@ -128,8 +162,7 @@ export default function QuoteDetailPage() {
     }
   };
 
-  const handleImageError = (assetId: string, s3Url: string) => {
-    console.error('[IMAGE-ERROR]', `Failed to load image: ${s3Url}`);
+  const handleImageError = (assetId: string) => {
     setImageLoadErrors(prev => ({ ...prev, [assetId]: true }));
   };
 
@@ -298,25 +331,27 @@ export default function QuoteDetailPage() {
         )}
 
         {/* Uploaded Photos */}
-        {quote.uploadedAssets && quote.uploadedAssets.length > 0 && (
+        {assetsWithUrls && assetsWithUrls.length > 0 && (
           <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-            <h2 className="text-xl font-bold mb-4">Uploaded Files ({quote.uploadedAssets.length})</h2>
+            <h2 className="text-xl font-bold mb-4">Uploaded Files ({assetsWithUrls.length})</h2>
             <div className="space-y-3">
-              {quote.uploadedAssets.map((asset) => {
+              {assetsWithUrls.map((asset) => {
                 const hasError = imageLoadErrors[asset.id];
+                const displayUrl = asset.signedUrl || asset.s3Url;
+                
                 return (
                   <div key={asset.id} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <p className="font-semibold text-gray-900">{asset.filename}</p>
                         <p className="text-xs text-gray-500 mt-1">Type: {asset.mimeType}</p>
-                        <p className="text-xs text-gray-500 mt-1 break-all">
-                          S3 URL: <span className="font-mono text-blue-600">{asset.s3Url}</span>
-                        </p>
+                        {asset.signedUrlError && (
+                          <p className="text-xs text-red-600 mt-1">Error: {asset.signedUrlError}</p>
+                        )}
                       </div>
                       <div className="ml-4 flex gap-2">
                         <a
-                          href={asset.s3Url}
+                          href={displayUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
@@ -324,7 +359,7 @@ export default function QuoteDetailPage() {
                           Open
                         </a>
                         <a
-                          href={asset.s3Url}
+                          href={displayUrl}
                           download
                           className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
                         >
@@ -334,22 +369,20 @@ export default function QuoteDetailPage() {
                     </div>
                     
                     {/* Try to show image preview */}
-                    {asset.mimeType.startsWith('image/') && !hasError && (
+                    {asset.mimeType.startsWith('image/') && !hasError && asset.signedUrl && (
                       <div className="mt-3">
                         <img
-                          src={asset.s3Url}
+                          src={asset.signedUrl}
                           alt={asset.filename}
                           className="max-w-xs h-auto rounded border border-gray-300"
-                          onError={() => handleImageError(asset.id, asset.s3Url)}
+                          onError={() => handleImageError(asset.id)}
                         />
                       </div>
                     )}
                     
                     {hasError && (
                       <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
-                        ⚠️ Image failed to load. This may mean the file is still private on S3.
-                        <br />
-                        Click "Open" or "Download" to access it directly.
+                        ⚠️ Image preview failed to load.
                       </div>
                     )}
                   </div>
