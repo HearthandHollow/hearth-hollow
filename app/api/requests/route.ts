@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
             },
           });
         } catch (fileError) {
-          console.error(`Failed to upload file ${file.name}:`, fileError);
+          console.error(`[UPLOAD-ERROR] Failed to upload file ${file.name}:`, fileError);
           // Continue even if file upload fails
         }
       }
