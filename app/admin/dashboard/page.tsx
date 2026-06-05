@@ -10,89 +10,82 @@ interface Quote {
   category: string;
   description: string;
   status: string;
+  approvalStatus: string;
   createdAt: string;
+  emailSentAt?: string;
+  clientApprovedAt?: string;
+  clientDeniedAt?: string;
   customer?: {
     name: string;
     email: string;
     phone: string;
   };
-}
-
-interface CustomerProfile {
-  email: string;
-  name: string;
-  phone: string;
-  quoteCount: number;
-  quotes: Quote[];
-  lastQuoteDate: string;
-  statuses: {
-    submitted: number;
-    analyzed: number;
-    sent: number;
+  estimate?: {
+    lowEstimate: number;
+    expectedEstimate: number;
+    highEstimate: number;
   };
 }
 
+type TabType = 'awaiting_analysis' | 'awaiting_client_approval' | 'active' | 'denied';
+
 export default function AdminDashboard() {
-  const [profiles, setProfiles] = useState<CustomerProfile[]>([]);
+  const [allQuotes, setAllQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<TabType>('awaiting_analysis');
   const router = useRouter();
 
   useEffect(() => {
-    fetchProfiles();
+    fetchQuotes();
   }, []);
 
-  const fetchProfiles = async () => {
+  const fetchQuotes = async () => {
     try {
       const response = await fetch('/api/admin/quotes');
       if (response.status === 401) {
         router.push('/admin');
         return;
       }
-      if (!response.ok) throw new Error('Failed to fetch profiles');
+      if (!response.ok) throw new Error('Failed to fetch quotes');
       const data = await response.json();
-      setProfiles(data.profiles || []);
+
+      // Flatten all quotes from profiles
+      const quotes = data.profiles?.flatMap((p: any) =>
+        p.quotes.map((q: any) => ({ ...q, customer: p }))
+      ) || [];
+
+      setAllQuotes(quotes);
     } catch (err) {
-      setError('Failed to load profiles');
+      setError('Failed to load quotes');
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter profiles based on search
-  const filteredProfiles = profiles.filter((profile) => {
-    const term = searchTerm.toLowerCase();
-    return (
-      profile.email.toLowerCase().includes(term) ||
-      profile.name.toLowerCase().includes(term) ||
-      profile.phone.toLowerCase().includes(term)
-    );
-  });
+  // Filter quotes by tab
+  const getQuotesByStatus = (status: TabType) => {
+    return allQuotes.filter(q => q.approvalStatus === status);
+  };
 
   const handleLogout = () => {
     fetch('/api/admin/logout', { method: 'POST' });
     router.push('/admin');
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'submitted':
-        return 'bg-blue-100 text-blue-800';
-      case 'analyzed':
-        return 'bg-green-100 text-green-800';
-      case 'sent':
-        return 'bg-purple-100 text-purple-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const tabs: { id: TabType; label: string; icon: string }[] = [
+    { id: 'awaiting_analysis', label: 'Awaiting Analysis', icon: '⏳' },
+    { id: 'awaiting_client_approval', label: 'Waiting Client Approval', icon: '⏱️' },
+    { id: 'active', label: 'Active Jobs', icon: '✓' },
+    { id: 'denied', label: 'Denied Quotes', icon: '✕' },
+  ];
 
-  const totalStats = {
-    customers: filteredProfiles.length,
-    quotes: filteredProfiles.reduce((sum, p) => sum + p.quoteCount, 0),
-    pending: filteredProfiles.reduce((sum, p) => sum + p.statuses.submitted, 0),
-    sent: filteredProfiles.reduce((sum, p) => sum + p.statuses.sent, 0),
+  const currentQuotes = getQuotesByStatus(activeTab);
+  const quoteCounts = {
+    awaiting_analysis: getQuotesByStatus('awaiting_analysis').length,
+    awaiting_client_approval: getQuotesByStatus('awaiting_client_approval').length,
+    active: getQuotesByStatus('active').length,
+    denied: getQuotesByStatus('denied').length,
   };
 
   return (
@@ -100,9 +93,7 @@ export default function AdminDashboard() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-amber-900">
-            Hearth & Hollow
-          </h1>
+          <h1 className="text-3xl font-bold text-amber-900">Hearth & Hollow</h1>
           <p className="text-gray-600">Admin Dashboard</p>
         </div>
         <button
@@ -114,80 +105,28 @@ export default function AdminDashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto p-6">
-        {/* Search Bar */}
-        <div className="mb-6">
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+      <div className="max-w-6xl mx-auto p-6">
+        {/* Tabs */}
+        <div className="bg-white rounded-lg shadow mb-6 border-b border-gray-200">
+          <div className="flex">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 px-6 py-4 text-center font-medium border-b-2 transition ${
+                  activeTab === tab.id
+                    ? 'border-amber-600 text-amber-900 bg-amber-50'
+                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search by email, name, or phone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 px-4 py-2 border-0 focus:outline-none"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
+                <span className="text-lg mr-2">{tab.icon}</span>
+                {tab.label}
+                <span className="ml-2 inline-block px-2 py-1 text-xs font-semibold bg-gray-200 text-gray-700 rounded-full">
+                  {quoteCounts[tab.id]}
+                </span>
+              </button>
+            ))}
           </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-gray-600 text-sm">Total Customers</p>
-            <p className="text-3xl font-bold text-gray-900">
-              {totalStats.customers}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-gray-600 text-sm">Total Quotes</p>
-            <p className="text-3xl font-bold text-gray-900">
-              {totalStats.quotes}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-gray-600 text-sm">Pending Analysis</p>
-            <p className="text-3xl font-bold text-blue-600">
-              {totalStats.pending}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-gray-600 text-sm">Sent Estimates</p>
-            <p className="text-3xl font-bold text-purple-600">
-              {totalStats.sent}
-            </p>
-          </div>
-        </div>
-
-        {/* Title Section */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">
-            Customer Profiles
-          </h2>
-          <p className="text-gray-600 text-sm mt-1">
-            {totalStats.customers} customer{totalStats.customers !== 1 ? 's' : ''} with{' '}
-            {totalStats.quotes} total quote{totalStats.quotes !== 1 ? 's' : ''}
-          </p>
         </div>
 
         {error && (
@@ -198,107 +137,72 @@ export default function AdminDashboard() {
 
         {loading ? (
           <div className="text-center py-12">
-            <p className="text-gray-500">Loading customers...</p>
+            <p className="text-gray-500">Loading quotes...</p>
           </div>
-        ) : filteredProfiles.length === 0 ? (
+        ) : currentQuotes.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">
-            <p className="text-gray-500 text-lg">
-              {searchTerm ? 'No customers match your search' : 'No customers yet'}
-            </p>
+            <p className="text-gray-500 text-lg">No quotes in this category</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredProfiles.map((profile) => (
-              <div
-                key={profile.email}
-                className="bg-white rounded-lg shadow hover:shadow-lg transition"
-              >
-                {/* Customer Header */}
-                <div className="p-6 border-b border-gray-100">
+            {currentQuotes
+              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+              .map(quote => (
+                <Link
+                  key={quote.id}
+                  href={`/admin/quotes/${quote.id}`}
+                  className="block bg-white rounded-lg shadow hover:shadow-lg transition p-4"
+                >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {profile.name}
-                      </h3>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {profile.email}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {profile.phone}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-amber-600">
-                        {profile.quoteCount}
-                      </p>
-                      <p className="text-xs text-gray-500">Quote{profile.quoteCount !== 1 ? 's' : ''}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Last:{' '}
-                        {new Date(profile.lastQuoteDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Status Badges */}
-                  <div className="flex gap-2 mt-4">
-                    {profile.statuses.submitted > 0 && (
-                      <span className="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800">
-                        {profile.statuses.submitted} Pending
-                      </span>
-                    )}
-                    {profile.statuses.analyzed > 0 && (
-                      <span className="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
-                        {profile.statuses.analyzed} Ready
-                      </span>
-                    )}
-                    {profile.statuses.sent > 0 && (
-                      <span className="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800">
-                        {profile.statuses.sent} Sent
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Quotes List */}
-                <div className="divide-y divide-gray-100">
-                  {profile.quotes
-                    .sort(
-                      (a, b) =>
-                        new Date(b.createdAt).getTime() -
-                        new Date(a.createdAt).getTime()
-                    )
-                    .map((quote) => (
-                      <Link
-                        key={quote.id}
-                        href={`/admin/quotes/${quote.id}`}
-                        className="p-4 hover:bg-gray-50 cursor-pointer transition flex justify-between items-center"
-                      >
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
-                            {quote.category}
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {quote.customer?.name || 'Unknown Customer'}
+                          </h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            <strong>{quote.category}</strong> • {quote.customer?.email}
                           </p>
-                          <p className="text-sm text-gray-600 line-clamp-1 mt-1">
+                          <p className="text-sm text-gray-600 line-clamp-2 mt-2">
                             {quote.description}
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Quote #{quote.id.substring(0, 8)} •{' '}
-                            {new Date(quote.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="ml-6 text-right">
+                      {quote.estimate && (
+                        <div className="mb-3">
+                          <p className="text-sm text-gray-600">Estimated Cost</p>
+                          <p className="text-lg font-bold text-amber-600">
+                            ${quote.estimate.expectedEstimate.toLocaleString()}
                           </p>
                         </div>
-                        <div className="ml-4">
-                          <span
-                            className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
-                              quote.status
-                            )}`}
-                          >
-                            {quote.status}
-                          </span>
-                        </div>
-                      </Link>
-                    ))}
-                </div>
-              </div>
-            ))}
+                      )}
+
+                      <div className="text-xs text-gray-500 space-y-1">
+                        <p>Quote #{quote.id.substring(0, 8)}</p>
+                        <p>{new Date(quote.createdAt).toLocaleDateString()}</p>
+                        {quote.emailSentAt && (
+                          <p className="text-amber-600">
+                            Sent: {new Date(quote.emailSentAt).toLocaleDateString()}
+                          </p>
+                        )}
+                        {quote.clientApprovedAt && (
+                          <p className="text-green-600">
+                            Approved: {new Date(quote.clientApprovedAt).toLocaleDateString()}
+                          </p>
+                        )}
+                        {quote.clientDeniedAt && (
+                          <p className="text-red-600">
+                            Denied: {new Date(quote.clientDeniedAt).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
           </div>
         )}
       </div>

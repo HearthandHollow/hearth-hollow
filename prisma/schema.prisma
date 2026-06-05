@@ -27,20 +27,25 @@ model ProjectRequest {
   id          String     @id @default(cuid())
   customerId  String
   customer    Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  
+
   category    String     // "carpentry", "handyman", "fence", etc.
   location    String
   timeline    String     // "ASAP", "2 weeks", etc.
   description String     @db.Text
-  
+
   status      String     @default("submitted") // submitted, analyzing, approved, sent, accepted, declined
-  
+  approvalStatus String @default("awaiting_analysis") // awaiting_analysis, awaiting_client_approval, active, denied
+
+  clientApprovedAt DateTime?
+  clientDeniedAt   DateTime?
+  emailSentAt      DateTime?
+
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
-  
+
   uploadedAssets UploadedAsset[]
   estimate       Estimate?
-  
+
   @@map("project_requests")
 }
 
@@ -63,24 +68,29 @@ model Estimate {
   id          String     @id @default(cuid())
   projectId   String     @unique
   project     ProjectRequest @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
+
   // Estimates
   lowEstimate Float
   expectedEstimate Float
   highEstimate Float
-  
+
   // Breakdown & analysis
   breakdown   String     @db.Text
   rawAnalysis String?    @db.Text
   confidence  Float      @default(0.5)
-  
+
+  // Additional details
+  materialRequirements String? @db.Text
+  timeEstimation      String? // e.g., "3-5 days", "1-2 weeks"
+  isEdited           Boolean @default(false) // tracks if admin manually adjusted
+
   // Status
   status      String     @default("pending")
   sentAt      DateTime?
-  
+
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
-  
+
   @@map("estimates")
 }
 

@@ -39,3 +39,5 @@ prisma/*.db-journal
 # Temp
 tmp/
 temp/
+.vercel
+.env*

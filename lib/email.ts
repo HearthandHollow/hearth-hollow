@@ -41,11 +41,45 @@ export async function sendEstimateEmail(
   customerName: string,
   projectId: string,
   estimateDetails: string,
-  pdfUrl?: string
+  pdfUrl?: string,
+  includeActions: boolean = true
 ) {
   try {
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3001';
+
+    const approveButton = includeActions ? `
+      <a href="${baseUrl}/api/quotes/${projectId}/approve"
+         style="background-color: #22c55e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-right: 12px; display: inline-block; font-weight: bold;">
+        ✓ Approve Quote
+      </a>
+    ` : '';
+
+    const denyButton = includeActions ? `
+      <a href="${baseUrl}/api/quotes/${projectId}/deny"
+         style="background-color: #ef4444; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+        ✗ Decline Quote
+      </a>
+    ` : '';
+
+    const actionSection = includeActions ? `
+      <div style="margin: 30px 0; padding: 20px; background: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 4px;">
+        <p style="margin-top: 0;"><strong>Please review the estimate and let us know if you'd like to proceed:</strong></p>
+        <div style="margin: 20px 0;">
+          ${approveButton}
+          ${denyButton}
+        </div>
+        <p style="margin-bottom: 0; font-size: 12px; color: #666;">
+          Or reply to this email with any questions or modifications you'd like!
+        </p>
+      </div>
+    ` : `
+      <p>Please reply to this email to discuss next steps or ask any questions!</p>
+    `;
+
     const result = await resend.emails.send({
-      from: SENDER_EMAIL, // Your verified domain email
+      from: SENDER_EMAIL,
       to: customerEmail,
       reply_to: "quotes@thehearthhollow.com",
       subject: `Your Project Estimate - Reference #${projectId}`,
@@ -56,7 +90,7 @@ export async function sendEstimateEmail(
         <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
           ${estimateDetails}
         </div>
-        <p>Please reply to this email to discuss next steps or ask any questions!</p>
+        ${actionSection}
         <p>Best regards,<br/>The Hearth & Hollow Team</p>
       `,
       text: `Your Project Estimate\n\nHi ${customerName},\n\nThank you for choosing The Hearth & Hollow! Here's your project estimate:\n\n${estimateDetails}\n\nPlease reply to this email to discuss next steps or ask any questions!\n\nBest regards,\nThe Hearth & Hollow Team`,
