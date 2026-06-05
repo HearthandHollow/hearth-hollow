@@ -46,11 +46,11 @@ export async function GET(
       },
     })
 
-    // Redirect to request page with message
+    // Redirect to approval decline page
     const baseUrl = process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}`
       : 'http://localhost:3001'
-    return NextResponse.redirect(`${baseUrl}/request?declined=true`)
+    return NextResponse.redirect(`${baseUrl}/quote-approval/${params.id}`)
   } catch (error) {
     console.error('Error denying quote:', error)
     const baseUrl = process.env.VERCEL_URL

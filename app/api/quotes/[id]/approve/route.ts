@@ -46,11 +46,11 @@ export async function GET(
       },
     })
 
-    // Redirect to confirmation page
+    // Redirect to approval confirmation page
     const baseUrl = process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}`
       : 'http://localhost:3001'
-    return NextResponse.redirect(`${baseUrl}/confirmation/${params.id}?approved=true`)
+    return NextResponse.redirect(`${baseUrl}/quote-approval/${params.id}?approved=true`)
   } catch (error) {
     console.error('Error approving quote:', error)
     const baseUrl = process.env.VERCEL_URL
