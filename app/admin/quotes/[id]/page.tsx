@@ -195,6 +195,24 @@ export default function QuoteDetailPage() {
     setImageLoadErrors(prev => ({ ...prev, [assetId]: true }));
   };
 
+  const handleDeleteQuote = async () => {
+    if (!window.confirm('Are you sure you want to delete this quote? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/quotes/${quoteId}/delete`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete quote');
+      setError('');
+      // Redirect to dashboard after successful deletion
+      router.push('/admin/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete quote');
+    }
+  };
+
   const handleSaveEstimate = async () => {
     try {
       const response = await fetch(`/api/admin/quotes/${quoteId}/estimate`, {
@@ -282,14 +300,22 @@ export default function QuoteDetailPage() {
               <h1 className="text-3xl font-bold mb-2">Quote #{quote.id.substring(0, 8)}</h1>
               <p className="text-gray-600">Status: <span className="font-semibold capitalize">{quote.status}</span></p>
             </div>
-            {quote.status !== 'sent' && (
+            <div className="flex gap-2">
+              {quote.status !== 'sent' && (
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  {isEditing ? 'Cancel Edit' : 'Edit Details'}
+                </button>
+              )}
               <button
-                onClick={() => setIsEditing(!isEditing)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                onClick={handleDeleteQuote}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
-                {isEditing ? 'Cancel Edit' : 'Edit Details'}
+                Delete Quote
               </button>
-            )}
+            </div>
           </div>
 
           {/* Approval Status Section */}
