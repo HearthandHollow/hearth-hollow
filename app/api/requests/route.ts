@@ -5,7 +5,22 @@ import { sendConfirmationEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   try {
-    const formData = await req.formData();
+    let formData;
+    try {
+      formData = await req.formData();
+    } catch (formErr) {
+      console.error("FormData parsing error:", formErr);
+      // Try to get Content-Type for debugging
+      const contentType = req.headers.get("content-type");
+      console.error("Request Content-Type:", contentType);
+      return NextResponse.json(
+        {
+          error: "Invalid request format",
+          details: "Request must be sent as multipart/form-data"
+        },
+        { status: 400 }
+      );
+    }
 
     const name = formData.get("name") as string;
     const email = formData.get("email") as string;
