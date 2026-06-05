@@ -36,6 +36,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>('awaiting_analysis');
   const [selectedQuotes, setSelectedQuotes] = useState<Set<string>>(new Set());
   const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -65,9 +66,35 @@ export default function AdminDashboard() {
     }
   };
 
+  // Filter quotes by search query
+  const getSearchResults = (quotes: Quote[]) => {
+    if (!searchQuery.trim()) return quotes;
+
+    const query = searchQuery.toLowerCase().trim();
+    return quotes.filter(q => {
+      const name = q.customer?.name?.toLowerCase() || '';
+      const email = q.customer?.email?.toLowerCase() || '';
+      const phone = q.customer?.phone?.toLowerCase() || '';
+      const location = q.description?.toLowerCase() || '';
+
+      return (
+        name.includes(query) ||
+        email.includes(query) ||
+        phone.includes(query) ||
+        location.includes(query)
+      );
+    });
+  };
+
   // Filter quotes by tab
   const getQuotesByStatus = (status: TabType) => {
-    return allQuotes.filter(q => q.approvalStatus === status);
+    const filtered = allQuotes.filter(q => q.approvalStatus === status);
+    return getSearchResults(filtered);
+  };
+
+  // Get all quotes matching search (across all tabs)
+  const getSearchedQuotes = () => {
+    return getSearchResults(allQuotes);
   };
 
   const handleLogout = () => {
@@ -147,7 +174,9 @@ export default function AdminDashboard() {
     { id: 'denied', label: 'Denied Quotes', icon: '✕' },
   ];
 
-  const currentQuotes = getQuotesByStatus(activeTab);
+  // Determine which quotes to display
+  const currentQuotes = searchQuery.trim() ? getSearchedQuotes() : getQuotesByStatus(activeTab);
+
   const quoteCounts = {
     awaiting_analysis: getQuotesByStatus('awaiting_analysis').length,
     awaiting_client_approval: getQuotesByStatus('awaiting_client_approval').length,
@@ -173,18 +202,37 @@ export default function AdminDashboard() {
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto p-6">
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="bg-white rounded-lg shadow p-4">
+            <input
+              type="text"
+              placeholder="Search quotes by email, name, phone, or address..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            />
+            {searchQuery && (
+              <div className="mt-2 text-sm text-gray-600">
+                Found {currentQuotes.length} quote{currentQuotes.length !== 1 ? 's' : ''} matching "{searchQuery}"
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Tabs */}
-        <div className="bg-white rounded-lg shadow mb-6 border-b border-gray-200">
+        <div className={`bg-white rounded-lg shadow mb-6 border-b border-gray-200 ${searchQuery ? 'opacity-60' : ''}`}>
           <div className="flex">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
+                disabled={!!searchQuery}
                 className={`flex-1 px-6 py-4 text-center font-medium border-b-2 transition ${
                   activeTab === tab.id
                     ? 'border-amber-600 text-amber-900 bg-amber-50'
                     : 'border-transparent text-gray-600 hover:text-gray-900'
-                }`}
+                } ${searchQuery ? 'cursor-not-allowed' : ''}`}
               >
                 <span className="text-lg mr-2">{tab.icon}</span>
                 {tab.label}
@@ -195,6 +243,12 @@ export default function AdminDashboard() {
             ))}
           </div>
         </div>
+
+        {searchQuery && (
+          <div className="bg-blue-50 border border-blue-200 text-blue-900 px-4 py-3 rounded-lg mb-6 text-sm">
+            Showing search results from all tabs. Clear the search to return to the selected tab.
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
