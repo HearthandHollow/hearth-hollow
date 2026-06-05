@@ -50,14 +50,14 @@ export async function sendEstimateEmail(
       : 'http://localhost:3001';
 
     const approveButton = includeActions ? `
-      <a href="${baseUrl}/api/quotes/${projectId}/approve"
+      <a href="${baseUrl}/api/quotes/${projectId}/approve?email=${encodeURIComponent(customerEmail)}"
          style="background-color: #22c55e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-right: 12px; display: inline-block; font-weight: bold;">
         ✓ Approve Quote
       </a>
     ` : '';
 
     const denyButton = includeActions ? `
-      <a href="${baseUrl}/api/quotes/${projectId}/deny"
+      <a href="${baseUrl}/api/quotes/${projectId}/deny?email=${encodeURIComponent(customerEmail)}"
          style="background-color: #ef4444; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
         ✗ Decline Quote
       </a>

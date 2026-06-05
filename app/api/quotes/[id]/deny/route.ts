@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-export async function POST(
+export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { email } = await request.json()
+    const searchParams = request.nextUrl.searchParams
+    const email = searchParams.get('email')
+
+    if (!email) {
+      return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+    }
 
     // Find and update the project request
     const project = await prisma.projectRequest.findUnique({
@@ -15,16 +20,20 @@ export async function POST(
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Quote not found' }, { status: 404 })
+      return NextResponse.redirect(
+        new URL('/request?error=Quote not found', request.url)
+      )
     }
 
     // Verify email matches
     if (project.customer.email !== email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.redirect(
+        new URL('/request?error=Unauthorized', request.url)
+      )
     }
 
     // Update approval status
-    const updated = await prisma.projectRequest.update({
+    await prisma.projectRequest.update({
       where: { id: params.id },
       data: {
         approvalStatus: 'denied',
@@ -33,18 +42,16 @@ export async function POST(
         status: 'declined',
         updatedAt: new Date(),
       },
-      include: { customer: true, estimate: true },
     })
 
-    return NextResponse.json({
-      message: 'Quote declined successfully',
-      project: updated,
-    })
+    // Redirect to request page with message
+    return NextResponse.redirect(
+      new URL('/request?declined=true', request.url)
+    )
   } catch (error) {
     console.error('Error denying quote:', error)
-    return NextResponse.json(
-      { error: 'Failed to deny quote' },
-      { status: 500 }
+    return NextResponse.redirect(
+      new URL('/request?error=Failed to decline quote', request.url)
     )
   }
 }
