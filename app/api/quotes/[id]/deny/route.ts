@@ -20,16 +20,18 @@ export async function GET(
     })
 
     if (!project) {
-      return NextResponse.redirect(
-        new URL('/request?error=Quote not found', request.url)
-      )
+      const baseUrl = process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'http://localhost:3001'
+      return NextResponse.redirect(`${baseUrl}/request?error=Quote not found`)
     }
 
     // Verify email matches
     if (project.customer.email !== email) {
-      return NextResponse.redirect(
-        new URL('/request?error=Unauthorized', request.url)
-      )
+      const baseUrl = process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'http://localhost:3001'
+      return NextResponse.redirect(`${baseUrl}/request?error=Unauthorized`)
     }
 
     // Update approval status
@@ -45,13 +47,15 @@ export async function GET(
     })
 
     // Redirect to request page with message
-    return NextResponse.redirect(
-      new URL('/request?declined=true', request.url)
-    )
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3001'
+    return NextResponse.redirect(`${baseUrl}/request?declined=true`)
   } catch (error) {
     console.error('Error denying quote:', error)
-    return NextResponse.redirect(
-      new URL('/request?error=Failed to decline quote', request.url)
-    )
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3001'
+    return NextResponse.redirect(`${baseUrl}/request?error=Failed to decline quote`)
   }
 }

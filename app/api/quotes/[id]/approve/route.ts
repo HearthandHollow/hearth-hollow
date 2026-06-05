@@ -20,16 +20,18 @@ export async function GET(
     })
 
     if (!project) {
-      return NextResponse.redirect(
-        new URL('/request?error=Quote not found', request.url)
-      )
+      const baseUrl = process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'http://localhost:3001'
+      return NextResponse.redirect(`${baseUrl}/request?error=Quote not found`)
     }
 
     // Verify email matches
     if (project.customer.email !== email) {
-      return NextResponse.redirect(
-        new URL('/request?error=Unauthorized', request.url)
-      )
+      const baseUrl = process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'http://localhost:3001'
+      return NextResponse.redirect(`${baseUrl}/request?error=Unauthorized`)
     }
 
     // Update approval status
@@ -45,13 +47,15 @@ export async function GET(
     })
 
     // Redirect to confirmation page
-    return NextResponse.redirect(
-      new URL(`/confirmation/${params.id}?approved=true`, request.url)
-    )
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3001'
+    return NextResponse.redirect(`${baseUrl}/confirmation/${params.id}?approved=true`)
   } catch (error) {
     console.error('Error approving quote:', error)
-    return NextResponse.redirect(
-      new URL('/request?error=Failed to approve quote', request.url)
-    )
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3001'
+    return NextResponse.redirect(`${baseUrl}/request?error=Failed to approve quote`)
   }
 }
