@@ -1,0 +1,124 @@
+/* Theme CSS Variables */
+:root {
+  /* Colors */
+  --color-primary: #b45309;
+  --color-secondary: #78350f;
+  --color-accent: #ea580c;
+  --color-text-primary: #1f2937;
+  --color-text-secondary: #6b7280;
+  --color-background: #f9fafb;
+  --color-border: #e5e7eb;
+
+  /* Typography */
+  --font-body: system-ui, -apple-system, sans-serif;
+  --font-heading: system-ui, -apple-system, sans-serif;
+}
+
+/* Apply theme to HTML elements */
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+  color: var(--color-primary);
+}
+
+a {
+  color: var(--color-primary);
+}
+
+a:hover {
+  opacity: 0.8;
+}
+
+button {
+  color: var(--color-text-primary);
+}
+
+/* Primary buttons */
+.btn-primary,
+button[class*='primary'] {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.btn-primary:hover,
+button[class*='primary']:hover {
+  opacity: 0.9;
+}
+
+/* Secondary buttons */
+.btn-secondary,
+button[class*='secondary'] {
+  background-color: var(--color-secondary);
+  color: white;
+}
+
+.btn-secondary:hover,
+button[class*='secondary']:hover {
+  opacity: 0.9;
+}
+
+/* Accent elements */
+.accent {
+  color: var(--color-accent);
+}
+
+.accent-bg {
+  background-color: var(--color-accent);
+}
+
+/* Borders and dividers */
+border,
+hr {
+  border-color: var(--color-border);
+}
+
+/* Input fields */
+input,
+textarea,
+select {
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-text-secondary);
+}
+
+/* Focus states */
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.1);
+}
+
+/* Secondary text */
+.text-secondary,
+[class*='text-gray'] {
+  color: var(--color-text-secondary);
+}
+
+/* Backgrounds */
+.bg-primary {
+  background-color: var(--color-primary);
+}
+
+.bg-secondary {
+  background-color: var(--color-secondary);
+}
+
+.bg-accent {
+  background-color: var(--color-accent);
+}

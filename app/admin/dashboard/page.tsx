@@ -192,12 +192,20 @@ export default function AdminDashboard() {
           <h1 className="text-3xl font-bold text-amber-900">Hearth & Hollow</h1>
           <p className="text-gray-600">Admin Dashboard</p>
         </div>
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
-        >
-          Logout
-        </button>
+        <div className="flex gap-2">
+          <Link
+            href="/admin/theme"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+          >
+            🎨 Theme
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* Main Content */}

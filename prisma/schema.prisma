@@ -116,9 +116,36 @@ model AdminUser {
   email     String     @unique
   password  String     // bcrypt hash
   name      String
-  
+
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
-  
+
   @@map("admin_users")
 }
+
+model ThemeSettings {
+  id        String     @id @default(cuid())
+
+  // Colors
+  primaryColor     String   @default("#b45309") // Amber-700
+  secondaryColor   String   @default("#78350f") // Amber-900
+  accentColor      String   @default("#ea580c") // Orange
+  textPrimary      String   @default("#1f2937") // Gray-900
+  textSecondary    String   @default("#6b7280") // Gray-500
+  backgroundColor  String   @default("#f9fafb") // Gray-50
+  borderColor      String   @default("#e5e7eb") // Gray-200
+
+  // Typography
+  fontFamily       String   @default("system-ui, -apple-system, sans-serif")
+  headingFont      String   @default("system-ui, -apple-system, sans-serif")
+
+  // Branding
+  siteName         String   @default("Hearth & Hollow")
+  siteDescription  String   @default("Custom handyman and carpentry services")
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("theme_settings")
+}
+
