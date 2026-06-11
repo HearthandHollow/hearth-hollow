@@ -2,11 +2,9 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Use your verified custom domain for sending
-// After verifying thehearthhollow.com in Resend dashboard, use:
-// const SENDER_EMAIL = "noreply@thehearthhollow.com";
-// Until then, use:
-const SENDER_EMAIL = process.env.RESEND_FROM_EMAIL || "noreply@thehearthhollow.com";
+// Verified domain: thehearthhollow.com
+// Using support@ so replies go to a monitored inbox
+const SENDER_EMAIL = process.env.RESEND_FROM_EMAIL || "support@thehearthhollow.com";
 
 export async function sendConfirmationEmail(
   customerEmail: string,
