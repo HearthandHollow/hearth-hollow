@@ -28,6 +28,10 @@ export async function POST(
       );
     }
 
+    // Optional flag from the admin UI to include uploaded photos in vision analysis.
+    const body = await req.json().catch(() => ({} as any));
+    const includePhotos = !!body?.includePhotos;
+
     const quote = await prisma.projectRequest.findUnique({
       where: { id: params.id },
       include: {
@@ -53,7 +57,7 @@ export async function POST(
     let analysis: any;
     try {
       console.log(`[ROUTE] Calling analyzeWithClaude...`);
-      analysis = await analyzeWithClaude(quote, quote.uploadedAssets || []);
+      analysis = await analyzeWithClaude(quote, quote.uploadedAssets || [], { includePhotos });
       console.log(`[ROUTE] ✅ Claude analysis succeeded`);
     } catch (claudeError) {
       console.error(`[ROUTE] ❌ Claude analysis FAILED`);

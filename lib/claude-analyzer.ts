@@ -1,12 +1,32 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { getObjectBytes } from "@/lib/s3";
+
+// Image types Claude's vision API accepts.
+const VISION_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+]);
+
+// Keep vision payloads sane.
+const MAX_VISION_IMAGES = 6;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // Anthropic per-image limit
+
+interface AnalyzeOptions {
+  includePhotos?: boolean;
+}
 
 export async function analyzeWithClaude(
   quote: any,
-  uploadedAssets: any[]
+  uploadedAssets: any[],
+  options: AnalyzeOptions = {}
 ): Promise<any> {
+  const { includePhotos = false } = options;
+
   console.log(`[CLAUDE] Starting analysis for quote ${quote.id}`);
   console.log(`[CLAUDE] Category: ${quote.category}`);
-  console.log(`[CLAUDE] Assets: ${uploadedAssets.length}`);
+  console.log(`[CLAUDE] Assets: ${uploadedAssets.length}, includePhotos: ${includePhotos}`);
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -23,26 +43,57 @@ export async function analyzeWithClaude(
 
   const messageContent: any[] = [];
 
-  // Note: Claude's vision API requires publicly accessible HTTPS URLs
-  // S3 public URLs often have issues with vision API access
-  // For now, we'll analyze based on description alone for reliability
-  // Images can be reviewed by admin in the dashboard
-  console.log(`[CLAUDE] Note: Analyzing based on description. Admin can review photos in dashboard.`);
+  // Optionally attach uploaded photos for vision analysis.
+  let attachedImages = 0;
+  if (includePhotos && Array.isArray(uploadedAssets) && uploadedAssets.length > 0) {
+    const imageAssets = uploadedAssets
+      .filter((a) => VISION_MIME_TYPES.has(a?.mimeType))
+      .slice(0, MAX_VISION_IMAGES);
+
+    for (const asset of imageAssets) {
+      try {
+        const { buffer, contentType } = await getObjectBytes(asset.s3Url);
+        if (buffer.byteLength > MAX_IMAGE_BYTES) {
+          console.warn(`[CLAUDE] Skipping ${asset.filename} (too large: ${buffer.byteLength} bytes)`);
+          continue;
+        }
+        const mediaType = VISION_MIME_TYPES.has(contentType)
+          ? contentType
+          : asset.mimeType;
+        messageContent.push({
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: mediaType,
+            data: buffer.toString("base64"),
+          },
+        });
+        attachedImages += 1;
+      } catch (imgErr) {
+        console.error(
+          `[CLAUDE] Failed to load image ${asset?.filename} for vision:`,
+          imgErr instanceof Error ? imgErr.message : String(imgErr)
+        );
+        // Skip this image and continue.
+      }
+    }
+    console.log(`[CLAUDE] Attached ${attachedImages} image(s) for vision analysis`);
+  }
+
+  const photoNote =
+    attachedImages > 0
+      ? `\n\nThe customer attached ${attachedImages} photo(s) of the project, included above. Use them to inform your estimate (assess condition, scope, materials, and complexity from what you can see).`
+      : "";
 
   const prompt = `You are a professional handyman estimator. Analyze this project and provide estimates.
 
 CATEGORY: ${quote.category}
-DESCRIPTION: ${quote.description}
+DESCRIPTION: ${quote.description}${photoNote}
 
 Respond with ONLY valid JSON (no markdown):
 {"low_estimate": 500, "expected_estimate": 750, "high_estimate": 1200, "complexity": 5, "scope_summary": "work needed", "key_risks": []}`;
 
-  messageContent.push({
-    type: "text",
-    text: prompt,
-  });
-
-  console.log(`[CLAUDE] Message content blocks: ${messageContent.length}`);
+  messageContent.push({ type: "text", text: prompt });
 
   try {
     console.log(`[CLAUDE] Calling Claude API...`);
@@ -62,8 +113,6 @@ Respond with ONLY valid JSON (no markdown):
     const responseText =
       response.content[0].type === "text" ? response.content[0].text : "";
 
-    console.log(`[CLAUDE] Response: ${responseText.substring(0, 200)}`);
-
     let jsonStr = responseText.trim();
 
     if (jsonStr.startsWith("```")) {
@@ -80,9 +129,7 @@ Respond with ONLY valid JSON (no markdown):
       jsonStr = jsonStr.substring(jsonStart, jsonEnd + 1);
     }
 
-    console.log(`[CLAUDE] Parsing JSON...`);
     const parsed = JSON.parse(jsonStr);
-    console.log(`[CLAUDE] ✅ JSON parsed`);
 
     const low = parseInt(parsed.low_estimate) || 500;
     const expected = parseInt(parsed.expected_estimate) || 750;
@@ -110,13 +157,12 @@ Respond with ONLY valid JSON (no markdown):
 **Key Risks:**
 ${(parsed.key_risks || []).map((r: any) => `- ${r}`).join("\n") || "None identified"}
 
-**Note:** Analysis based on description. Admin can review uploaded photos in the dashboard.`,
-      confidence: 0.75,
+**Photos:** ${attachedImages > 0 ? `${attachedImages} photo(s) analyzed.` : "Analysis based on description only."}`,
+      confidence: attachedImages > 0 ? 0.85 : 0.75,
       fullAnalysis: JSON.stringify(parsed, null, 2),
     };
   } catch (error) {
     console.error(`[CLAUDE] ❌ Error:`, error);
-    console.error(`[CLAUDE] Error type: ${error instanceof Error ? error.constructor.name : typeof error}`);
     console.error(`[CLAUDE] Error message: ${error instanceof Error ? error.message : String(error)}`);
     throw error;
   }

@@ -77,6 +77,7 @@ export default function QuoteDetailPage() {
   });
   const [imageLoadErrors, setImageLoadErrors] = useState<Record<string, boolean>>({});
   const [changingStatus, setChangingStatus] = useState(false);
+  const [includePhotos, setIncludePhotos] = useState(false);
 
   useEffect(() => {
     fetchQuote();
@@ -150,6 +151,8 @@ export default function QuoteDetailPage() {
     try {
       const response = await fetch(`/api/admin/quotes/${quoteId}/analyze`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ includePhotos }),
       });
       if (!response.ok) throw new Error('Analysis failed');
       const data = await response.json();
@@ -546,6 +549,17 @@ export default function QuoteDetailPage() {
                 >
                   Edit Estimate
                 </button>
+              )}
+              {assetsWithUrls.some((a) => a.mimeType?.startsWith('image/')) && (
+                <label className="flex items-center gap-2 text-sm text-gray-700 select-none mr-2">
+                  <input
+                    type="checkbox"
+                    checked={includePhotos}
+                    onChange={(e) => setIncludePhotos(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  Include photos
+                </label>
               )}
               <button
                 onClick={handleAnalyze}

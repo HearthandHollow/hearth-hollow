@@ -79,6 +79,34 @@ export async function uploadToS3(
   }
 }
 
+// Download the raw bytes of an uploaded object (used for AI vision input).
+export async function getObjectBytes(
+  key: string
+): Promise<{ buffer: Buffer; contentType: string }> {
+  const bucketName =
+    process.env.AWS_S3_BUCKET_NAME ||
+    process.env.AWS_S3_BUCKET ||
+    'hearth-and-hollow-quotes';
+
+  if (!s3Client) {
+    throw new Error("S3 not configured - client not initialized");
+  }
+
+  const command = new GetObjectCommand({ Bucket: bucketName, Key: key });
+  const result = await s3Client.send(command);
+
+  if (!result.Body) {
+    throw new Error(`Empty body for S3 object: ${key}`);
+  }
+
+  // @ts-expect-error transformToByteArray exists on the SDK v3 stream body
+  const bytes: Uint8Array = await result.Body.transformToByteArray();
+  return {
+    buffer: Buffer.from(bytes),
+    contentType: result.ContentType || "application/octet-stream",
+  };
+}
+
 // Get a signed URL for an uploaded key
 export async function getSignedUrlForKey(key: string): Promise<string> {
   const bucketName =
