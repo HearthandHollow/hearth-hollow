@@ -106,6 +106,10 @@ export default function QuoteDetailPage() {
   const [sendingReply, setSendingReply] = useState(false);
   const [analyzingEmails, setAnalyzingEmails] = useState(false);
   const [emailAnalysis, setEmailAnalysis] = useState<EmailAnalysis | null>(null);
+  const [scheduleEditing, setScheduleEditing] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleSlot, setScheduleSlot] = useState<'morning' | 'afternoon'>('morning');
+  const [savingSchedule, setSavingSchedule] = useState(false);
 
   useEffect(() => {
     fetchQuote();
@@ -142,6 +146,12 @@ export default function QuoteDetailPage() {
           materialRequirements: data.estimate.materialRequirements || '',
           timeEstimation: data.estimate.timeEstimation || '',
         });
+      }
+
+      // Initialize schedule edit fields
+      if (data.scheduledDate) {
+        setScheduleDate(String(data.scheduledDate).slice(0, 10));
+        setScheduleSlot(data.scheduledSlot === 'afternoon' ? 'afternoon' : 'morning');
       }
 
       // Generate signed URLs for assets
@@ -354,6 +364,58 @@ export default function QuoteDetailPage() {
     setIsEditingEstimate(true);
   };
 
+  const handleSaveSchedule = async () => {
+    if (!scheduleDate) return;
+    setSavingSchedule(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/quotes/${quoteId}/schedule`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: scheduleDate, slot: scheduleSlot }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update schedule');
+      setQuote(data);
+      setScheduleEditing(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update schedule');
+    } finally {
+      setSavingSchedule(false);
+    }
+  };
+
+  const handleClearSchedule = async () => {
+    if (!window.confirm('Remove the scheduled date for this quote?')) return;
+    setSavingSchedule(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/quotes/${quoteId}/schedule`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: null }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to clear schedule');
+      setQuote(data);
+      setScheduleDate('');
+      setScheduleEditing(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to clear schedule');
+    } finally {
+      setSavingSchedule(false);
+    }
+  };
+
+  const formatScheduled = (iso: string) =>
+    new Date(`${String(iso).slice(0, 10)}T12:00:00Z`).toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
@@ -507,6 +569,90 @@ export default function QuoteDetailPage() {
               <p className="font-semibold">{quote.customer?.phone}</p>
             </div>
           </div>
+        </div>
+
+        {/* Appointment / Schedule */}
+        <div className="bg-white rounded-lg shadow-md p-8 mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">Appointment</h2>
+            {!scheduleEditing && (
+              <button
+                onClick={() => setScheduleEditing(true)}
+                className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm font-semibold"
+              >
+                {quote.scheduledDate ? 'Reschedule' : 'Set date'}
+              </button>
+            )}
+          </div>
+
+          {!scheduleEditing ? (
+            quote.scheduledDate ? (
+              <p className="text-gray-700">
+                {formatScheduled(quote.scheduledDate)}
+                {quote.scheduledSlot ? ` — ${quote.scheduledSlot === 'afternoon' ? 'Afternoon' : 'Morning'}` : ''}
+              </p>
+            ) : (
+              <p className="text-gray-500">Not scheduled yet.</p>
+            )
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold mb-2">Date</label>
+                <input
+                  type="date"
+                  value={scheduleDate}
+                  onChange={(e) => setScheduleDate(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2">Time of day</label>
+                <div className="flex gap-2">
+                  {(['morning', 'afternoon'] as const).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setScheduleSlot(s)}
+                      className={`px-4 py-2 rounded-lg border text-sm font-medium ${
+                        scheduleSlot === s
+                          ? 'bg-amber-600 text-white border-amber-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-amber-400'
+                      }`}
+                    >
+                      {s === 'morning' ? 'Morning' : 'Afternoon'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={handleSaveSchedule}
+                  disabled={savingSchedule || !scheduleDate}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm font-semibold"
+                >
+                  {savingSchedule ? 'Saving…' : 'Save date'}
+                </button>
+                {quote.scheduledDate && (
+                  <button
+                    onClick={handleClearSchedule}
+                    disabled={savingSchedule}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm font-semibold"
+                  >
+                    Clear date
+                  </button>
+                )}
+                <button
+                  onClick={() => setScheduleEditing(false)}
+                  disabled={savingSchedule}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 text-sm font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                Admin override — this isn&apos;t limited to your normal availability. Booking a date already taken by another job is blocked.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Project Details - Edit Mode */}
