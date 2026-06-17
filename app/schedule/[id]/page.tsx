@@ -90,7 +90,7 @@ export default function SchedulePage() {
   };
 
   const Shell = ({ children }: { children: React.ReactNode }) => (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
+    <div className="min-h-screen bg-themeBg py-12 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-lg shadow-md p-8">{children}</div>
       </div>
@@ -100,7 +100,7 @@ export default function SchedulePage() {
   if (loading) {
     return (
       <Shell>
-        <p className="text-gray-500">Loading available dates…</p>
+        <p className="text-themeMuted">Loading available dates…</p>
       </Shell>
     );
   }
@@ -110,7 +110,7 @@ export default function SchedulePage() {
       <Shell>
         <h1 className="text-2xl font-bold mb-2">Scheduling</h1>
         <p className="text-red-600">{error}</p>
-        <p className="text-gray-600 mt-3 text-sm">
+        <p className="text-themeMuted mt-3 text-sm">
           If this link isn&apos;t working, reply to your estimate email and we&apos;ll help you book.
         </p>
       </Shell>
@@ -123,10 +123,10 @@ export default function SchedulePage() {
         <div className="text-center">
           <div className="text-4xl mb-3">✅</div>
           <h1 className="text-2xl font-bold mb-2">You&apos;re booked!</h1>
-          <p className="text-gray-700">
+          <p className="text-themeMuted">
             {fmtLong(confirmed.date)} — {confirmed.slot === 'afternoon' ? 'Afternoon' : 'Morning'}
           </p>
-          <p className="text-gray-600 mt-4 text-sm">
+          <p className="text-themeMuted mt-4 text-sm">
             We&apos;ve emailed you a confirmation and will reach out to confirm the exact arrival time. Thanks for choosing The Hearth &amp; Hollow!
           </p>
         </div>
@@ -138,11 +138,11 @@ export default function SchedulePage() {
     return (
       <Shell>
         <h1 className="text-2xl font-bold mb-2">You&apos;re already scheduled</h1>
-        <p className="text-gray-700">
+        <p className="text-themeMuted">
           {fmtLong(alreadyBooked.date)} —{' '}
           {alreadyBooked.slot === 'afternoon' ? 'Afternoon' : 'Morning'}
         </p>
-        <p className="text-gray-600 mt-4 text-sm">
+        <p className="text-themeMuted mt-4 text-sm">
           Need to change it? Reply to your confirmation email and we&apos;ll sort it out.
         </p>
       </Shell>
@@ -152,7 +152,7 @@ export default function SchedulePage() {
   return (
     <Shell>
       <h1 className="text-2xl font-bold mb-1">Schedule your project</h1>
-      <p className="text-gray-600 mb-6">
+      <p className="text-themeMuted mb-6">
         {customerName ? `Thanks, ${customerName}! ` : ''}Pick a day that works for you.
       </p>
 
@@ -163,7 +163,7 @@ export default function SchedulePage() {
       )}
 
       {dates.length === 0 ? (
-        <p className="text-gray-600">
+        <p className="text-themeMuted">
           No open dates right now — please reply to your estimate email and we&apos;ll find a time.
         </p>
       ) : (
@@ -175,8 +175,8 @@ export default function SchedulePage() {
                 onClick={() => setSelectedDate(d)}
                 className={`px-3 py-3 rounded-lg border text-sm font-medium ${
                   selectedDate === d
-                    ? 'bg-amber-600 text-white border-amber-600'
-                    : 'bg-white text-gray-700 border-gray-300 hover:border-amber-400'
+                    ? 'bg-brand text-white border-brand'
+                    : 'bg-white text-themeMuted border-themeBorder hover:border-brand'
                 }`}
               >
                 {fmtShort(d)}
@@ -187,7 +187,7 @@ export default function SchedulePage() {
           {selectedDate && (
             <div className="border-t pt-5">
               <p className="font-semibold mb-1">{fmtLong(selectedDate)}</p>
-              <p className="text-sm text-gray-600 mb-3">What time of day works best?</p>
+              <p className="text-sm text-themeMuted mb-3">What time of day works best?</p>
               <div className="flex gap-2 mb-5">
                 {(['morning', 'afternoon'] as const).map((s) => (
                   <button
@@ -195,8 +195,8 @@ export default function SchedulePage() {
                     onClick={() => setSlot(s)}
                     className={`flex-1 px-4 py-2 rounded-lg border text-sm font-medium ${
                       slot === s
-                        ? 'bg-amber-600 text-white border-amber-600'
-                        : 'bg-white text-gray-700 border-gray-300 hover:border-amber-400'
+                        ? 'bg-brand text-white border-brand'
+                        : 'bg-white text-themeMuted border-themeBorder hover:border-brand'
                     }`}
                   >
                     {s === 'morning' ? 'Morning' : 'Afternoon'}

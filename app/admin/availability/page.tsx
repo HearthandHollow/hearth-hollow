@@ -243,11 +243,11 @@ export default function AvailabilityPage() {
       case 'blocked':
         return 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200 cursor-pointer line-through';
       case 'booked':
-        return 'bg-amber-200 text-amber-900 border-amber-300 hover:bg-amber-300 cursor-pointer';
+        return 'bg-amber-200 text-brandDark border-brand hover:bg-amber-300 cursor-pointer';
       case 'off':
-        return 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100 cursor-pointer';
+        return 'bg-themeBg text-gray-400 border-themeBorder hover:bg-gray-100 cursor-pointer';
       case 'past':
-        return 'bg-gray-50 text-gray-300 border-gray-100 cursor-pointer';
+        return 'bg-themeBg text-gray-300 border-gray-100 cursor-pointer';
       default:
         return 'bg-transparent text-transparent border-transparent';
     }
@@ -255,14 +255,14 @@ export default function AvailabilityPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <p className="text-gray-500">Loading…</p>
+      <div className="min-h-screen bg-themeBg p-6">
+        <p className="text-themeMuted">Loading…</p>
       </div>
     );
   }
   if (!settings) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-themeBg p-6">
         <p className="text-red-600">{error || 'Could not load settings'}</p>
       </div>
     );
@@ -289,12 +289,12 @@ export default function AvailabilityPage() {
   const modalWeekdayOn = selectedDate ? weekdayOn(dateFromKey(selectedDate)) : false;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
+    <div className="min-h-screen bg-themeBg py-12 px-4">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Recurring weekday defaults */}
         <div className="bg-white rounded-lg shadow-md p-8">
           <h1 className="text-2xl font-bold mb-1">Scheduling Availability</h1>
-          <p className="text-gray-600 mb-6 text-sm">
+          <p className="text-themeMuted mb-6 text-sm">
             Set your normal working days, then use the calendar to close off, open, or inspect any day. One job per available day.
           </p>
 
@@ -309,8 +309,8 @@ export default function AvailabilityPage() {
                 onClick={() => toggleWeekday(d.key)}
                 className={`px-3 py-2 rounded-lg border text-sm font-medium ${
                   (settings as any)[d.key]
-                    ? 'bg-amber-600 text-white border-amber-600'
-                    : 'bg-white text-gray-600 border-gray-300 hover:border-amber-400'
+                    ? 'bg-brand text-white border-brand'
+                    : 'bg-white text-themeMuted border-themeBorder hover:border-brand'
                 }`}
               >
                 {d.label.slice(0, 3)}
@@ -326,14 +326,14 @@ export default function AvailabilityPage() {
               max={52}
               value={settings.bookingWindowWeeks}
               onChange={(e) => setSettings({ ...settings, bookingWindowWeeks: parseInt(e.target.value) || 1 })}
-              className="w-32 px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-32 px-3 py-2 border border-themeBorder rounded-lg"
             />
           </div>
 
           <button
             onClick={saveSettings}
             disabled={saving}
-            className="px-5 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 font-semibold"
+            className="px-5 py-2 bg-brand text-white rounded-lg hover:bg-brandDark disabled:opacity-50 font-semibold"
           >
             {saving ? 'Saving…' : 'Save working days'}
           </button>
@@ -342,17 +342,17 @@ export default function AvailabilityPage() {
         {/* Calendar */}
         <div className="bg-white rounded-lg shadow-md p-6 sm:p-8">
           <div className="flex items-center justify-between mb-4">
-            <button onClick={goPrev} disabled={!canGoPrev} className="px-3 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40">‹ Prev</button>
+            <button onClick={goPrev} disabled={!canGoPrev} className="px-3 py-1 rounded border border-themeBorder text-themeMuted hover:bg-themeBg disabled:opacity-40">‹ Prev</button>
             <h2 className="text-lg font-bold">{monthLabel}</h2>
-            <button onClick={goNext} className="px-3 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50">Next ›</button>
+            <button onClick={goNext} className="px-3 py-1 rounded border border-themeBorder text-themeMuted hover:bg-themeBg">Next ›</button>
           </div>
 
-          <p className="text-xs text-gray-500 mb-3">Click any day to view jobs or open/close it. “Close week” blocks a whole row.</p>
+          <p className="text-xs text-themeMuted mb-3">Click any day to view jobs or open/close it. “Close week” blocks a whole row.</p>
 
           <div className="grid grid-cols-8 gap-1 mb-1">
             <div className="text-xs" />
             {DOW_LABELS.map((l) => (
-              <div key={l} className="text-center text-xs font-semibold text-gray-500">{l}</div>
+              <div key={l} className="text-center text-xs font-semibold text-themeMuted">{l}</div>
             ))}
           </div>
 
@@ -364,7 +364,7 @@ export default function AvailabilityPage() {
                   <button
                     onClick={wt?.action}
                     disabled={!wt}
-                    className={`text-[10px] leading-tight rounded px-1 ${wt ? 'text-gray-600 hover:bg-gray-100 border border-gray-200' : 'text-transparent'}`}
+                    className={`text-[10px] leading-tight rounded px-1 ${wt ? 'text-themeMuted hover:bg-gray-100 border border-themeBorder' : 'text-transparent'}`}
                   >
                     {wt ? wt.label : ''}
                   </button>
@@ -389,11 +389,11 @@ export default function AvailabilityPage() {
             })}
           </div>
 
-          <div className="flex flex-wrap gap-3 mt-4 text-xs text-gray-600">
+          <div className="flex flex-wrap gap-3 mt-4 text-xs text-themeMuted">
             <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-100 border border-green-300 inline-block" /> Open</span>
             <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-100 border border-red-200 inline-block" /> Closed</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-200 border border-amber-300 inline-block" /> Booked</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-50 border border-gray-200 inline-block" /> Not a working day</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-200 border border-brand inline-block" /> Booked</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-themeBg border border-themeBorder inline-block" /> Not a working day</span>
           </div>
         </div>
       </div>
@@ -410,10 +410,10 @@ export default function AvailabilityPage() {
           >
             <div className="flex justify-between items-start mb-3">
               <h3 className="text-lg font-bold">{fmtLong(selectedDate)}</h3>
-              <button onClick={() => setSelectedDate(null)} className="text-gray-400 hover:text-gray-700 text-xl leading-none">×</button>
+              <button onClick={() => setSelectedDate(null)} className="text-gray-400 hover:text-themeMuted text-xl leading-none">×</button>
             </div>
 
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-themeMuted mb-4">
               Status:{' '}
               <span className="font-semibold">
                 {modalStatus === 'booked' && 'Booked'}
@@ -433,20 +433,20 @@ export default function AvailabilityPage() {
                     <Link
                       key={j.id}
                       href={`/admin/quotes/${j.id}`}
-                      className="block border border-gray-200 rounded-lg p-3 hover:bg-gray-50"
+                      className="block border border-themeBorder rounded-lg p-3 hover:bg-themeBg"
                     >
-                      <p className="font-semibold text-gray-900">{j.name}</p>
-                      <p className="text-sm text-gray-600">
+                      <p className="font-semibold text-themeText">{j.name}</p>
+                      <p className="text-sm text-themeMuted">
                         {j.category}
                         {j.slot ? ` · ${j.slot === 'afternoon' ? 'Afternoon' : 'Morning'}` : ''}
                       </p>
-                      <p className="text-xs text-blue-600 mt-1">Open ticket →</p>
+                      <p className="text-xs text-accent mt-1">Open ticket →</p>
                     </Link>
                   ))}
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-gray-500 mb-4">No jobs scheduled this day.</p>
+              <p className="text-sm text-themeMuted mb-4">No jobs scheduled this day.</p>
             )}
 
             {/* Actions */}
@@ -462,7 +462,7 @@ export default function AvailabilityPage() {
               {modalStatus === 'available' && !modalWeekdayOn && (
                 <button
                   onClick={() => { applyOpen([selectedDate], false); setSelectedDate(null); }}
-                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm font-semibold"
+                  className="px-4 py-2 bg-themeBg0 text-white rounded-lg hover:bg-gray-600 text-sm font-semibold"
                 >
                   Remove one-off opening
                 </button>
@@ -485,7 +485,7 @@ export default function AvailabilityPage() {
               )}
               <button
                 onClick={() => setSelectedDate(null)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-semibold"
+                className="px-4 py-2 bg-gray-200 text-themeMuted rounded-lg hover:bg-gray-300 text-sm font-semibold"
               >
                 Close
               </button>

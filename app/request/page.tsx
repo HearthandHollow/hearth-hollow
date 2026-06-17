@@ -148,10 +148,10 @@ export default function RequestPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
+    <div className="min-h-screen bg-themeBg py-12 px-4">
       <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8">
         <h1 className="text-3xl font-bold mb-2">Request a Quote</h1>
-        <p className="text-gray-600 mb-8">Tell us about your project</p>
+        <p className="text-themeMuted mb-8">Tell us about your project</p>
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
@@ -170,7 +170,7 @@ export default function RequestPage() {
                 placeholder="Full Name"
                 value={formData.name}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-themeBorder rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
                 required
               />
               <input
@@ -179,7 +179,7 @@ export default function RequestPage() {
                 placeholder="Email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-themeBorder rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
                 required
               />
               <input
@@ -188,7 +188,7 @@ export default function RequestPage() {
                 placeholder="Phone Number"
                 value={formData.phone}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-themeBorder rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
                 required
               />
               <input
@@ -197,7 +197,7 @@ export default function RequestPage() {
                 placeholder="Project Location (City/Address)"
                 value={formData.location}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-themeBorder rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
           </div>
@@ -210,7 +210,7 @@ export default function RequestPage() {
                 name="category"
                 value={formData.category}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-themeBorder rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
                 required
               >
                 <option value="">Select Service Category</option>
@@ -222,7 +222,7 @@ export default function RequestPage() {
                 name="timeline"
                 value={formData.timeline}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-themeBorder rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="">Desired Timeline</option>
                 {TIMELINES.map(t => (
@@ -236,16 +236,16 @@ export default function RequestPage() {
               value={formData.description}
               onChange={handleInputChange}
               rows={5}
-              className="w-full mt-4 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full mt-4 px-4 py-2 border border-themeBorder rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
               required
             />
           </div>
 
           {/* File Upload */}
           <div className="border-b pb-6">
-            <h2 className="text-lg font-semibold mb-4">Upload Photos <span className="text-sm font-normal text-gray-600">(Optional)</span></h2>
-            <p className="text-sm text-gray-500 mb-3">Max 5MB per file, 20MB total</p>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 transition">
+            <h2 className="text-lg font-semibold mb-4">Upload Photos <span className="text-sm font-normal text-themeMuted">(Optional)</span></h2>
+            <p className="text-sm text-themeMuted mb-3">Max 5MB per file, 20MB total</p>
+            <div className="border-2 border-dashed border-themeBorder rounded-lg p-8 text-center cursor-pointer hover:bg-themeBg transition">
               <input
                 type="file"
                 multiple
@@ -257,18 +257,18 @@ export default function RequestPage() {
               <label htmlFor="file-input" className="cursor-pointer">
                 <div className="text-4xl mb-2">📸</div>
                 <p className="font-semibold">Click to upload or drag and drop</p>
-                <p className="text-sm text-gray-600">PNG, JPG, GIF</p>
+                <p className="text-sm text-themeMuted">PNG, JPG, GIF</p>
               </label>
             </div>
 
             {uploadedFiles.length > 0 && (
               <div className="mt-4">
                 <h3 className="font-semibold mb-2">Uploaded Files ({uploadedFiles.length})</h3>
-                <p className="text-sm text-gray-600 mb-2">Total size: {formatFileSize(getTotalFileSize())}</p>
+                <p className="text-sm text-themeMuted mb-2">Total size: {formatFileSize(getTotalFileSize())}</p>
                 <div className="space-y-2">
                   {uploadedFiles.map((file, index) => (
-                    <div key={index} className="flex justify-between items-center bg-gray-50 p-3 rounded">
-                      <span className="text-sm text-gray-700">{file.name} ({formatFileSize(file.size)})</span>
+                    <div key={index} className="flex justify-between items-center bg-themeBg p-3 rounded">
+                      <span className="text-sm text-themeMuted">{file.name} ({formatFileSize(file.size)})</span>
                       <button
                         type="button"
                         onClick={() => removeFile(index)}
@@ -287,7 +287,7 @@ export default function RequestPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            className="w-full bg-accent text-white py-3 rounded-lg font-semibold hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
             {loading ? "Submitting..." : "Submit Request"}
           </button>

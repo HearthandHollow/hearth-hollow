@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import crypto from "crypto";
 
@@ -104,6 +104,20 @@ export async function getObjectBytes(
     buffer: Buffer.from(bytes),
     contentType: result.ContentType || "application/octet-stream",
   };
+}
+
+// Delete an object (best-effort).
+export async function deleteFromS3(key: string): Promise<void> {
+  const bucketName =
+    process.env.AWS_S3_BUCKET_NAME ||
+    process.env.AWS_S3_BUCKET ||
+    'hearth-and-hollow-quotes';
+  if (!s3Client) return;
+  try {
+    await s3Client.send(new DeleteObjectCommand({ Bucket: bucketName, Key: key }));
+  } catch (error) {
+    console.error('[S3] delete failed:', error instanceof Error ? error.message : String(error));
+  }
 }
 
 // Get a signed URL for an uploaded key

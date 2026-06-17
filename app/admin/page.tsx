@@ -36,14 +36,14 @@ export default function AdminLogin() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-900 to-amber-700 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
-        <h1 className="text-3xl font-bold text-amber-900 mb-2">
+        <h1 className="text-3xl font-bold text-brandDark mb-2">
           Hearth & Hollow
         </h1>
-        <p className="text-gray-600 mb-6">Admin Dashboard</p>
+        <p className="text-themeMuted mb-6">Admin Dashboard</p>
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-themeMuted mb-2">
               Admin Password
             </label>
             <input
@@ -51,7 +51,7 @@ export default function AdminLogin() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter admin password"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-themeBorder rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
               disabled={loading}
             />
           </div>
@@ -65,13 +65,13 @@ export default function AdminLogin() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-amber-600 hover:bg-amber-700 disabled:bg-gray-400 text-white font-semibold py-2 rounded-lg transition"
+            className="w-full bg-brand hover:bg-brandDark disabled:bg-gray-400 text-white font-semibold py-2 rounded-lg transition"
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
-        <p className="text-xs text-gray-500 mt-4 text-center">
+        <p className="text-xs text-themeMuted mt-4 text-center">
           Password: Use the ADMIN_PASSWORD env var
         </p>
       </div>

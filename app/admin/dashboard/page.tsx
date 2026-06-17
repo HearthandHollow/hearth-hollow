@@ -185,23 +185,29 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-themeBg">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+      <div className="bg-white border-b border-themeBorder px-6 py-4 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-amber-900">Hearth & Hollow</h1>
-          <p className="text-gray-600">Admin Dashboard</p>
+          <h1 className="text-3xl font-bold text-brandDark">Hearth & Hollow</h1>
+          <p className="text-themeMuted">Admin Dashboard</p>
         </div>
         <div className="flex gap-2">
           <Link
             href="/admin/availability"
-            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg"
+            className="px-4 py-2 bg-brand hover:bg-brandDark text-white rounded-lg"
           >
             📅 Availability
           </Link>
           <Link
+            href="/admin/gallery"
+            className="px-4 py-2 bg-brand hover:bg-brandDark text-white rounded-lg"
+          >
+            🖼️ Gallery
+          </Link>
+          <Link
             href="/admin/theme"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+            className="px-4 py-2 bg-accent hover:bg-accent text-white rounded-lg"
           >
             🎨 Theme
           </Link>
@@ -224,10 +230,10 @@ export default function AdminDashboard() {
               placeholder="Search quotes by email, name, phone, or address..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-themeBorder rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
             />
             {searchQuery && (
-              <div className="mt-2 text-sm text-gray-600">
+              <div className="mt-2 text-sm text-themeMuted">
                 Found {currentQuotes.length} quote{currentQuotes.length !== 1 ? 's' : ''} matching "{searchQuery}"
               </div>
             )}
@@ -235,7 +241,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Tabs */}
-        <div className={`bg-white rounded-lg shadow mb-6 border-b border-gray-200 ${searchQuery ? 'opacity-60' : ''}`}>
+        <div className={`bg-white rounded-lg shadow mb-6 border-b border-themeBorder ${searchQuery ? 'opacity-60' : ''}`}>
           <div className="flex">
             {tabs.map(tab => (
               <button
@@ -244,13 +250,13 @@ export default function AdminDashboard() {
                 disabled={!!searchQuery}
                 className={`flex-1 px-6 py-4 text-center font-medium border-b-2 transition ${
                   activeTab === tab.id
-                    ? 'border-amber-600 text-amber-900 bg-amber-50'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                    ? 'border-brand text-brandDark bg-amber-50'
+                    : 'border-transparent text-themeMuted hover:text-themeText'
                 } ${searchQuery ? 'cursor-not-allowed' : ''}`}
               >
                 <span className="text-lg mr-2">{tab.icon}</span>
                 {tab.label}
-                <span className="ml-2 inline-block px-2 py-1 text-xs font-semibold bg-gray-200 text-gray-700 rounded-full">
+                <span className="ml-2 inline-block px-2 py-1 text-xs font-semibold bg-gray-200 text-themeMuted rounded-full">
                   {quoteCounts[tab.id]}
                 </span>
               </button>
@@ -259,7 +265,7 @@ export default function AdminDashboard() {
         </div>
 
         {searchQuery && (
-          <div className="bg-blue-50 border border-blue-200 text-blue-900 px-4 py-3 rounded-lg mb-6 text-sm">
+          <div className="bg-blue-50 border border-accent text-accent px-4 py-3 rounded-lg mb-6 text-sm">
             Showing search results from all tabs. Clear the search to return to the selected tab.
           </div>
         )}
@@ -271,9 +277,9 @@ export default function AdminDashboard() {
         )}
 
         {selectedQuotes.size > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg shadow p-4 mb-6">
+          <div className="bg-blue-50 border border-accent rounded-lg shadow p-4 mb-6">
             <div className="flex justify-between items-center">
-              <div className="text-sm font-semibold text-blue-900">
+              <div className="text-sm font-semibold text-accent">
                 {selectedQuotes.size} quote{selectedQuotes.size !== 1 ? 's' : ''} selected
               </div>
               <div className="flex gap-2">
@@ -285,7 +291,7 @@ export default function AdminDashboard() {
                     }
                   }}
                   disabled={bulkActionInProgress}
-                  className="px-3 py-2 bg-white border border-blue-300 rounded text-sm font-medium text-blue-900 hover:bg-blue-100 disabled:opacity-50"
+                  className="px-3 py-2 bg-white border border-accent rounded text-sm font-medium text-accent hover:bg-blue-100 disabled:opacity-50"
                 >
                   <option value="">Move to...</option>
                   <option value="awaiting_analysis">⏳ Awaiting Analysis</option>
@@ -303,7 +309,7 @@ export default function AdminDashboard() {
                 <button
                   onClick={() => setSelectedQuotes(new Set())}
                   disabled={bulkActionInProgress}
-                  className="px-4 py-2 bg-gray-400 text-white rounded text-sm font-medium hover:bg-gray-500 disabled:opacity-50"
+                  className="px-4 py-2 bg-gray-400 text-white rounded text-sm font-medium hover:bg-themeBg0 disabled:opacity-50"
                 >
                   Clear
                 </button>
@@ -314,11 +320,11 @@ export default function AdminDashboard() {
 
         {loading ? (
           <div className="text-center py-12">
-            <p className="text-gray-500">Loading quotes...</p>
+            <p className="text-themeMuted">Loading quotes...</p>
           </div>
         ) : currentQuotes.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">
-            <p className="text-gray-500 text-lg">No quotes in this category</p>
+            <p className="text-themeMuted text-lg">No quotes in this category</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -328,9 +334,9 @@ export default function AdminDashboard() {
                   type="checkbox"
                   checked={selectedQuotes.size === currentQuotes.length && currentQuotes.length > 0}
                   onChange={toggleSelectAll}
-                  className="w-5 h-5 rounded border-gray-300"
+                  className="w-5 h-5 rounded border-themeBorder"
                 />
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-themeMuted">
                   {selectedQuotes.size === currentQuotes.length && currentQuotes.length > 0
                     ? 'All selected'
                     : `Select all ${currentQuotes.length}`}
@@ -346,7 +352,7 @@ export default function AdminDashboard() {
                     checked={selectedQuotes.has(quote.id)}
                     onChange={() => toggleQuoteSelection(quote.id)}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-5 h-5 rounded border-gray-300 mt-4 flex-shrink-0"
+                    className="w-5 h-5 rounded border-themeBorder mt-4 flex-shrink-0"
                   />
                   <Link
                     href={`/admin/quotes/${quote.id}`}
@@ -356,13 +362,13 @@ export default function AdminDashboard() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3">
                           <div>
-                            <h3 className="text-lg font-semibold text-gray-900">
+                            <h3 className="text-lg font-semibold text-themeText">
                               {quote.customer?.name || 'Unknown Customer'}
                             </h3>
-                            <p className="text-sm text-gray-600 mt-1">
+                            <p className="text-sm text-themeMuted mt-1">
                               <strong>{quote.category}</strong> • {quote.customer?.email}
                             </p>
-                            <p className="text-sm text-gray-600 line-clamp-2 mt-2">
+                            <p className="text-sm text-themeMuted line-clamp-2 mt-2">
                               {quote.description}
                             </p>
                           </div>
@@ -372,18 +378,18 @@ export default function AdminDashboard() {
                       <div className="ml-6 text-right">
                         {quote.estimate && (
                           <div className="mb-3">
-                            <p className="text-sm text-gray-600">Estimated Cost</p>
-                            <p className="text-lg font-bold text-amber-600">
+                            <p className="text-sm text-themeMuted">Estimated Cost</p>
+                            <p className="text-lg font-bold text-brand">
                               ${quote.estimate.expectedEstimate.toLocaleString()}
                             </p>
                           </div>
                         )}
 
-                        <div className="text-xs text-gray-500 space-y-1">
+                        <div className="text-xs text-themeMuted space-y-1">
                           <p>Quote #{quote.id.substring(0, 8)}</p>
                           <p>{new Date(quote.createdAt).toLocaleDateString()}</p>
                           {quote.emailSentAt && (
-                            <p className="text-amber-600">
+                            <p className="text-brand">
                               Sent: {new Date(quote.emailSentAt).toLocaleDateString()}
                             </p>
                           )}

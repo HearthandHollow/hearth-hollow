@@ -91,6 +91,15 @@ model OpenDate {
   @@map("open_dates")
 }
 
+model GalleryImage {
+  id        String   @id @default(cuid())
+  s3Key     String
+  caption   String?
+  createdAt DateTime @default(now())
+
+  @@map("gallery_images")
+}
+
 model UploadedAsset {
   id         String     @id @default(cuid())
   projectId  String

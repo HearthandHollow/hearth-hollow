@@ -418,15 +418,15 @@ export default function QuoteDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <p className="text-gray-500">Loading quote...</p>
+      <div className="min-h-screen bg-themeBg p-6">
+        <p className="text-themeMuted">Loading quote...</p>
       </div>
     );
   }
 
   if (!quote) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-themeBg p-6">
         <p className="text-red-600">Quote not found</p>
       </div>
     );
@@ -452,7 +452,7 @@ export default function QuoteDetailPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
+    <div className="min-h-screen bg-themeBg py-12 px-4">
       <div className="max-w-4xl mx-auto">
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
@@ -465,9 +465,9 @@ export default function QuoteDetailPage() {
           <div className="flex justify-between items-start mb-4">
             <div>
               <h1 className="text-3xl font-bold mb-2">Quote #{quote.id.substring(0, 8)}</h1>
-              <p className="text-gray-600">Status: <span className="font-semibold capitalize">{quote.status}</span></p>
+              <p className="text-themeMuted">Status: <span className="font-semibold capitalize">{quote.status}</span></p>
               {quote.scheduledDate && (
-                <p className="text-gray-600 mt-1">
+                <p className="text-themeMuted mt-1">
                   📅 Scheduled:{' '}
                   <span className="font-semibold">
                     {new Date(`${quote.scheduledDate.slice(0, 10)}T12:00:00Z`).toLocaleDateString('en-US', {
@@ -486,7 +486,7 @@ export default function QuoteDetailPage() {
               {quote.status !== 'sent' && (
                 <button
                   onClick={() => setIsEditing(!isEditing)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent"
                 >
                   {isEditing ? 'Cancel Edit' : 'Edit Details'}
                 </button>
@@ -502,15 +502,15 @@ export default function QuoteDetailPage() {
 
           {/* Approval Status Section */}
           <div className="border-t pt-4">
-            <p className="text-sm font-semibold text-gray-700 mb-3">Approval Status: <span className="capitalize">{quote.approvalStatus?.replace('_', ' ')}</span></p>
+            <p className="text-sm font-semibold text-themeMuted mb-3">Approval Status: <span className="capitalize">{quote.approvalStatus?.replace('_', ' ')}</span></p>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => handleChangeStatus('awaiting_analysis')}
                 disabled={changingStatus}
                 className={`px-3 py-1 rounded text-sm font-medium ${
                   quote.approvalStatus === 'awaiting_analysis'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    ? 'bg-accent text-white'
+                    : 'bg-gray-200 text-themeMuted hover:bg-gray-300'
                 }`}
               >
                 ⏳ Awaiting Analysis
@@ -520,8 +520,8 @@ export default function QuoteDetailPage() {
                 disabled={changingStatus}
                 className={`px-3 py-1 rounded text-sm font-medium ${
                   quote.approvalStatus === 'awaiting_client_approval'
-                    ? 'bg-amber-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    ? 'bg-brand text-white'
+                    : 'bg-gray-200 text-themeMuted hover:bg-gray-300'
                 }`}
               >
                 ⏱️ Waiting Client Approval
@@ -532,7 +532,7 @@ export default function QuoteDetailPage() {
                 className={`px-3 py-1 rounded text-sm font-medium ${
                   quote.approvalStatus === 'active'
                     ? 'bg-green-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    : 'bg-gray-200 text-themeMuted hover:bg-gray-300'
                 }`}
               >
                 ✓ Active Job
@@ -543,7 +543,7 @@ export default function QuoteDetailPage() {
                 className={`px-3 py-1 rounded text-sm font-medium ${
                   quote.approvalStatus === 'denied'
                     ? 'bg-red-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    : 'bg-gray-200 text-themeMuted hover:bg-gray-300'
                 }`}
               >
                 ✕ Denied Quote
@@ -557,15 +557,15 @@ export default function QuoteDetailPage() {
           <h2 className="text-xl font-bold mb-4">Customer Information</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-600">Name</p>
+              <p className="text-sm text-themeMuted">Name</p>
               <p className="font-semibold">{quote.customer?.name}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Email</p>
+              <p className="text-sm text-themeMuted">Email</p>
               <p className="font-semibold">{quote.customer?.email}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Phone</p>
+              <p className="text-sm text-themeMuted">Phone</p>
               <p className="font-semibold">{quote.customer?.phone}</p>
             </div>
           </div>
@@ -578,7 +578,7 @@ export default function QuoteDetailPage() {
             {!scheduleEditing && (
               <button
                 onClick={() => setScheduleEditing(true)}
-                className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm font-semibold"
+                className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brandDark text-sm font-semibold"
               >
                 {quote.scheduledDate ? 'Reschedule' : 'Set date'}
               </button>
@@ -587,12 +587,12 @@ export default function QuoteDetailPage() {
 
           {!scheduleEditing ? (
             quote.scheduledDate ? (
-              <p className="text-gray-700">
+              <p className="text-themeMuted">
                 {formatScheduled(quote.scheduledDate)}
                 {quote.scheduledSlot ? ` — ${quote.scheduledSlot === 'afternoon' ? 'Afternoon' : 'Morning'}` : ''}
               </p>
             ) : (
-              <p className="text-gray-500">Not scheduled yet.</p>
+              <p className="text-themeMuted">Not scheduled yet.</p>
             )
           ) : (
             <div className="space-y-4">
@@ -602,7 +602,7 @@ export default function QuoteDetailPage() {
                   type="date"
                   value={scheduleDate}
                   onChange={(e) => setScheduleDate(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg"
+                  className="px-3 py-2 border border-themeBorder rounded-lg"
                 />
               </div>
               <div>
@@ -614,8 +614,8 @@ export default function QuoteDetailPage() {
                       onClick={() => setScheduleSlot(s)}
                       className={`px-4 py-2 rounded-lg border text-sm font-medium ${
                         scheduleSlot === s
-                          ? 'bg-amber-600 text-white border-amber-600'
-                          : 'bg-white text-gray-700 border-gray-300 hover:border-amber-400'
+                          ? 'bg-brand text-white border-brand'
+                          : 'bg-white text-themeMuted border-themeBorder hover:border-brand'
                       }`}
                     >
                       {s === 'morning' ? 'Morning' : 'Afternoon'}
@@ -643,12 +643,12 @@ export default function QuoteDetailPage() {
                 <button
                   onClick={() => setScheduleEditing(false)}
                   disabled={savingSchedule}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 text-sm font-semibold"
+                  className="px-4 py-2 bg-gray-300 text-themeMuted rounded-lg hover:bg-gray-400 text-sm font-semibold"
                 >
                   Cancel
                 </button>
               </div>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-themeMuted">
                 Admin override — this isn&apos;t limited to your normal availability. Booking a date already taken by another job is blocked.
               </p>
             </div>
@@ -657,7 +657,7 @@ export default function QuoteDetailPage() {
 
         {/* Project Details - Edit Mode */}
         {isEditing && (
-          <div className="bg-white rounded-lg shadow-md p-8 mb-6 border-2 border-blue-300">
+          <div className="bg-white rounded-lg shadow-md p-8 mb-6 border-2 border-accent">
             <h2 className="text-xl font-bold mb-4">Edit Project Details</h2>
             <div className="space-y-4">
               <div>
@@ -665,7 +665,7 @@ export default function QuoteDetailPage() {
                 <select
                   value={editData.category}
                   onChange={(e) => setEditData({ ...editData, category: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border border-themeBorder rounded-lg"
                 >
                   {CATEGORIES.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
@@ -678,7 +678,7 @@ export default function QuoteDetailPage() {
                   type="text"
                   value={editData.location}
                   onChange={(e) => setEditData({ ...editData, location: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border border-themeBorder rounded-lg"
                 />
               </div>
               <div>
@@ -686,7 +686,7 @@ export default function QuoteDetailPage() {
                 <select
                   value={editData.timeline}
                   onChange={(e) => setEditData({ ...editData, timeline: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border border-themeBorder rounded-lg"
                 >
                   <option value="">Select Timeline</option>
                   {TIMELINES.map(t => (
@@ -700,7 +700,7 @@ export default function QuoteDetailPage() {
                   value={editData.description}
                   onChange={(e) => setEditData({ ...editData, description: e.target.value })}
                   rows={6}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border border-themeBorder rounded-lg"
                 />
               </div>
               <button
@@ -719,20 +719,20 @@ export default function QuoteDetailPage() {
             <h2 className="text-xl font-bold mb-4">Project Details</h2>
             <div className="space-y-3">
               <div>
-                <p className="text-sm text-gray-600">Category</p>
+                <p className="text-sm text-themeMuted">Category</p>
                 <p className="font-semibold">{quote.category}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Location</p>
+                <p className="text-sm text-themeMuted">Location</p>
                 <p className="font-semibold">{quote.location || 'Not specified'}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Timeline</p>
+                <p className="text-sm text-themeMuted">Timeline</p>
                 <p className="font-semibold">{quote.timeline || 'Not specified'}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Description</p>
-                <p className="text-gray-700 whitespace-pre-wrap mt-1">{quote.description}</p>
+                <p className="text-sm text-themeMuted">Description</p>
+                <p className="text-themeMuted whitespace-pre-wrap mt-1">{quote.description}</p>
               </div>
             </div>
           </div>
@@ -748,11 +748,11 @@ export default function QuoteDetailPage() {
                 const displayUrl = asset.signedUrl || asset.s3Url;
                 
                 return (
-                  <div key={asset.id} className="border border-gray-200 rounded-lg p-4">
+                  <div key={asset.id} className="border border-themeBorder rounded-lg p-4">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <p className="font-semibold text-gray-900">{asset.filename}</p>
-                        <p className="text-xs text-gray-500 mt-1">Type: {asset.mimeType}</p>
+                        <p className="font-semibold text-themeText">{asset.filename}</p>
+                        <p className="text-xs text-themeMuted mt-1">Type: {asset.mimeType}</p>
                         {asset.signedUrlError && (
                           <p className="text-xs text-red-600 mt-1">Error: {asset.signedUrlError}</p>
                         )}
@@ -762,7 +762,7 @@ export default function QuoteDetailPage() {
                           href={displayUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                          className="px-3 py-1 bg-accent text-white rounded text-sm hover:bg-accent"
                         >
                           Open
                         </a>
@@ -782,7 +782,7 @@ export default function QuoteDetailPage() {
                         <img
                           src={asset.signedUrl}
                           alt={asset.filename}
-                          className="max-w-xs h-auto rounded border border-gray-300"
+                          className="max-w-xs h-auto rounded border border-themeBorder"
                           onError={() => handleImageError(asset.id)}
                         />
                       </div>
@@ -803,23 +803,23 @@ export default function QuoteDetailPage() {
         {/* Estimate Section */}
         <div className="bg-white rounded-lg shadow-md p-8 mb-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">AI Analysis {quote.estimate?.isEdited && <span className="text-sm text-amber-600">(Edited)</span>}</h2>
+            <h2 className="text-xl font-bold">AI Analysis {quote.estimate?.isEdited && <span className="text-sm text-brand">(Edited)</span>}</h2>
             <div className="flex gap-2">
               {quote.estimate && !isEditingEstimate && (
                 <button
                   onClick={() => setIsEditingEstimate(true)}
-                  className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-semibold"
+                  className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brandDark font-semibold"
                 >
                   Edit Estimate
                 </button>
               )}
               {assetsWithUrls.some((a) => a.mimeType?.startsWith('image/')) && (
-                <label className="flex items-center gap-2 text-sm text-gray-700 select-none mr-2">
+                <label className="flex items-center gap-2 text-sm text-themeMuted select-none mr-2">
                   <input
                     type="checkbox"
                     checked={includePhotos}
                     onChange={(e) => setIncludePhotos(e.target.checked)}
-                    className="rounded border-gray-300"
+                    className="rounded border-themeBorder"
                   />
                   Include photos
                 </label>
@@ -827,7 +827,7 @@ export default function QuoteDetailPage() {
               <button
                 onClick={handleAnalyze}
                 disabled={analyzing || isEditing || isEditingEstimate}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-semibold"
+                className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent disabled:opacity-50 font-semibold"
               >
                 {analyzing ? 'Analyzing...' : quote.estimate ? 'Re-Analyze' : 'Analyze'}
               </button>
@@ -835,8 +835,8 @@ export default function QuoteDetailPage() {
           </div>
 
           {isEditingEstimate && quote.estimate && (
-            <div className="mb-6 p-6 bg-amber-50 border-2 border-amber-300 rounded-lg">
-              <h3 className="text-lg font-bold mb-4 text-amber-900">Edit Estimate Details</h3>
+            <div className="mb-6 p-6 bg-amber-50 border-2 border-brand rounded-lg">
+              <h3 className="text-lg font-bold mb-4 text-brandDark">Edit Estimate Details</h3>
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-4">
                   <div>
@@ -845,7 +845,7 @@ export default function QuoteDetailPage() {
                       type="number"
                       value={estimateEditData.lowEstimate}
                       onChange={(e) => setEstimateEditData({ ...estimateEditData, lowEstimate: parseFloat(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-themeBorder rounded-lg"
                     />
                   </div>
                   <div>
@@ -854,7 +854,7 @@ export default function QuoteDetailPage() {
                       type="number"
                       value={estimateEditData.expectedEstimate}
                       onChange={(e) => setEstimateEditData({ ...estimateEditData, expectedEstimate: parseFloat(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-themeBorder rounded-lg"
                     />
                   </div>
                   <div>
@@ -863,7 +863,7 @@ export default function QuoteDetailPage() {
                       type="number"
                       value={estimateEditData.highEstimate}
                       onChange={(e) => setEstimateEditData({ ...estimateEditData, highEstimate: parseFloat(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-themeBorder rounded-lg"
                     />
                   </div>
                 </div>
@@ -875,7 +875,7 @@ export default function QuoteDetailPage() {
                     placeholder="e.g., '3-5 days', '1-2 weeks'"
                     value={estimateEditData.timeEstimation}
                     onChange={(e) => setEstimateEditData({ ...estimateEditData, timeEstimation: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-themeBorder rounded-lg"
                   />
                 </div>
 
@@ -886,7 +886,7 @@ export default function QuoteDetailPage() {
                     value={estimateEditData.materialRequirements}
                     onChange={(e) => setEstimateEditData({ ...estimateEditData, materialRequirements: e.target.value })}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-themeBorder rounded-lg"
                   />
                 </div>
 
@@ -896,7 +896,7 @@ export default function QuoteDetailPage() {
                     value={estimateEditData.breakdown}
                     onChange={(e) => setEstimateEditData({ ...estimateEditData, breakdown: e.target.value })}
                     rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-themeBorder rounded-lg"
                   />
                 </div>
 
@@ -909,7 +909,7 @@ export default function QuoteDetailPage() {
                   </button>
                   <button
                     onClick={() => setIsEditingEstimate(false)}
-                    className="flex-1 px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 font-semibold"
+                    className="flex-1 px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-themeBg0 font-semibold"
                   >
                     Cancel
                   </button>
@@ -922,36 +922,36 @@ export default function QuoteDetailPage() {
             <div>
               <div className="grid grid-cols-3 gap-4 mb-6">
                 <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600">Low Estimate</p>
-                  <p className="text-2xl font-bold text-blue-600">${quote.estimate.lowEstimate.toLocaleString()}</p>
+                  <p className="text-sm text-themeMuted">Low Estimate</p>
+                  <p className="text-2xl font-bold text-accent">${quote.estimate.lowEstimate.toLocaleString()}</p>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600">Expected</p>
+                  <p className="text-sm text-themeMuted">Expected</p>
                   <p className="text-2xl font-bold text-green-600">${quote.estimate.expectedEstimate.toLocaleString()}</p>
                 </div>
                 <div className="bg-red-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600">High Estimate</p>
+                  <p className="text-sm text-themeMuted">High Estimate</p>
                   <p className="text-2xl font-bold text-red-600">${quote.estimate.highEstimate.toLocaleString()}</p>
                 </div>
               </div>
 
               {quote.estimate.timeEstimation && (
                 <div className="bg-blue-50 p-4 rounded-lg mb-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-1">Timeline</p>
-                  <p className="text-gray-600">{quote.estimate.timeEstimation}</p>
+                  <p className="text-sm font-semibold text-themeMuted mb-1">Timeline</p>
+                  <p className="text-themeMuted">{quote.estimate.timeEstimation}</p>
                 </div>
               )}
 
               {quote.estimate.materialRequirements && (
                 <div className="bg-purple-50 p-4 rounded-lg mb-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-1">Materials Required</p>
-                  <p className="text-gray-600 whitespace-pre-wrap text-sm">{quote.estimate.materialRequirements}</p>
+                  <p className="text-sm font-semibold text-themeMuted mb-1">Materials Required</p>
+                  <p className="text-themeMuted whitespace-pre-wrap text-sm">{quote.estimate.materialRequirements}</p>
                 </div>
               )}
 
-              <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                <p className="text-sm font-semibold text-gray-700 mb-2">Breakdown</p>
-                <p className="text-gray-600 whitespace-pre-wrap text-sm">{quote.estimate.breakdown}</p>
+              <div className="bg-themeBg p-4 rounded-lg mb-6">
+                <p className="text-sm font-semibold text-themeMuted mb-2">Breakdown</p>
+                <p className="text-themeMuted whitespace-pre-wrap text-sm">{quote.estimate.breakdown}</p>
               </div>
 
               {quote.status !== 'sent' && (
@@ -972,7 +972,7 @@ export default function QuoteDetailPage() {
           )}
 
           {!quote.estimate && (
-            <p className="text-gray-600">No analysis yet. Click "Analyze" to generate an estimate.</p>
+            <p className="text-themeMuted">No analysis yet. Click "Analyze" to generate an estimate.</p>
           )}
         </div>
 
@@ -984,7 +984,7 @@ export default function QuoteDetailPage() {
               <button
                 onClick={fetchEmails}
                 disabled={emailsLoading}
-                className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 text-sm font-semibold"
+                className="px-3 py-2 bg-gray-200 text-themeMuted rounded-lg hover:bg-gray-300 disabled:opacity-50 text-sm font-semibold"
               >
                 {emailsLoading ? 'Loading...' : 'Refresh'}
               </button>
@@ -1001,7 +1001,7 @@ export default function QuoteDetailPage() {
           </div>
 
           {!emailsConfigured && (
-            <p className="text-gray-600 text-sm">
+            <p className="text-themeMuted text-sm">
               Email integration isn&apos;t configured yet. Add the Gmail OAuth environment variables to enable the conversation view.
             </p>
           )}
@@ -1013,7 +1013,7 @@ export default function QuoteDetailPage() {
           )}
 
           {emailsConfigured && !emailsLoading && emails.length === 0 && !emailError && (
-            <p className="text-gray-600 text-sm">
+            <p className="text-themeMuted text-sm">
               No emails found for this quote yet. Customer replies will appear here once they respond.
             </p>
           )}
@@ -1021,11 +1021,11 @@ export default function QuoteDetailPage() {
           {emailAnalysis && (
             <div className="mb-6 p-5 bg-purple-50 border-2 border-purple-200 rounded-lg">
               <h3 className="font-bold text-purple-900 mb-2">AI Summary</h3>
-              <p className="text-sm text-gray-700 mb-3">{emailAnalysis.summary}</p>
+              <p className="text-sm text-themeMuted mb-3">{emailAnalysis.summary}</p>
               {emailAnalysis.requestedChanges?.length > 0 && (
                 <div className="mb-3">
-                  <p className="text-sm font-semibold text-gray-700">Customer is asking for:</p>
-                  <ul className="list-disc list-inside text-sm text-gray-700">
+                  <p className="text-sm font-semibold text-themeMuted">Customer is asking for:</p>
+                  <ul className="list-disc list-inside text-sm text-themeMuted">
                     {emailAnalysis.requestedChanges.map((c, i) => (
                       <li key={i}>{c}</li>
                     ))}
@@ -1034,8 +1034,8 @@ export default function QuoteDetailPage() {
               )}
               {emailAnalysis.newDetails?.length > 0 && (
                 <div className="mb-3">
-                  <p className="text-sm font-semibold text-gray-700">New details:</p>
-                  <ul className="list-disc list-inside text-sm text-gray-700">
+                  <p className="text-sm font-semibold text-themeMuted">New details:</p>
+                  <ul className="list-disc list-inside text-sm text-themeMuted">
                     {emailAnalysis.newDetails.map((c, i) => (
                       <li key={i}>{c}</li>
                     ))}
@@ -1044,21 +1044,21 @@ export default function QuoteDetailPage() {
               )}
               {emailAnalysis.suggestedEstimate ? (
                 <div className="mt-3 p-3 bg-white rounded border border-purple-200">
-                  <p className="text-sm font-semibold text-gray-700 mb-1">Suggested estimate</p>
-                  <p className="text-sm text-gray-700">
+                  <p className="text-sm font-semibold text-themeMuted mb-1">Suggested estimate</p>
+                  <p className="text-sm text-themeMuted">
                     Low ${emailAnalysis.suggestedEstimate.low.toLocaleString()} · Expected ${emailAnalysis.suggestedEstimate.expected.toLocaleString()} · High ${emailAnalysis.suggestedEstimate.high.toLocaleString()}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">{emailAnalysis.reasoning}</p>
+                  <p className="text-xs text-themeMuted mt-1">{emailAnalysis.reasoning}</p>
                   <button
                     onClick={applySuggestedEstimate}
-                    className="mt-2 px-3 py-1 bg-amber-600 text-white rounded text-sm hover:bg-amber-700 font-semibold"
+                    className="mt-2 px-3 py-1 bg-brand text-white rounded text-sm hover:bg-brandDark font-semibold"
                   >
                     Review &amp; apply to estimate
                   </button>
                 </div>
               ) : (
                 emailAnalysis.reasoning && (
-                  <p className="text-sm text-gray-600 mt-2">
+                  <p className="text-sm text-themeMuted mt-2">
                     No pricing change suggested. {emailAnalysis.reasoning}
                   </p>
                 )
@@ -1069,13 +1069,13 @@ export default function QuoteDetailPage() {
           {emails.length > 0 && (
             <div className="space-y-3 mb-6">
               {emails.map((m) => (
-                <div key={m.id} className="border border-gray-200 rounded-lg p-4">
+                <div key={m.id} className="border border-themeBorder rounded-lg p-4">
                   <div className="flex justify-between items-baseline mb-1">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{m.from}</p>
-                    <p className="text-xs text-gray-500 ml-2 whitespace-nowrap">{m.date}</p>
+                    <p className="text-sm font-semibold text-themeText truncate">{m.from}</p>
+                    <p className="text-xs text-themeMuted ml-2 whitespace-nowrap">{m.date}</p>
                   </div>
-                  <p className="text-xs text-gray-500 mb-2">{m.subject}</p>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{m.body || m.snippet}</p>
+                  <p className="text-xs text-themeMuted mb-2">{m.subject}</p>
+                  <p className="text-sm text-themeMuted whitespace-pre-wrap">{m.body || m.snippet}</p>
                 </div>
               ))}
             </div>
@@ -1089,7 +1089,7 @@ export default function QuoteDetailPage() {
                 onChange={(e) => setReplyText(e.target.value)}
                 rows={4}
                 placeholder="Type your reply..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-2"
+                className="w-full px-4 py-2 border border-themeBorder rounded-lg mb-2"
               />
               <button
                 onClick={handleSendReply}

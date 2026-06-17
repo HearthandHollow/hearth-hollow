@@ -104,27 +104,27 @@ export default function ThemePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <p className="text-gray-500">Loading theme settings...</p>
+      <div className="min-h-screen bg-themeBg p-6">
+        <p className="text-themeMuted">Loading theme settings...</p>
       </div>
     );
   }
 
   if (!theme) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-themeBg p-6">
         <p className="text-red-600">Failed to load theme settings</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-themeBg">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+      <div className="bg-white border-b border-themeBorder px-6 py-4 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Theme Customizer</h1>
-          <p className="text-gray-600">Customize your website's appearance</p>
+          <h1 className="text-3xl font-bold text-themeText">Theme Customizer</h1>
+          <p className="text-themeMuted">Customize your website's appearance</p>
         </div>
         <Link
           href="/admin/dashboard"
@@ -161,7 +161,7 @@ export default function ThemePage() {
                     type="text"
                     value={theme.siteName}
                     onChange={(e) => handleTextChange('siteName', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-4 py-2 border border-themeBorder rounded-lg"
                   />
                 </div>
                 <div>
@@ -170,7 +170,7 @@ export default function ThemePage() {
                     type="text"
                     value={theme.siteDescription}
                     onChange={(e) => handleTextChange('siteDescription', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-4 py-2 border border-themeBorder rounded-lg"
                   />
                 </div>
               </div>
@@ -193,11 +193,11 @@ export default function ThemePage() {
                       type="text"
                       value={theme.primaryColor}
                       onChange={(e) => handleColorChange('primaryColor', e.target.value)}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+                      className="flex-1 px-4 py-2 border border-themeBorder rounded-lg"
                       placeholder="#b45309"
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Buttons, links, headers</p>
+                  <p className="text-xs text-themeMuted mt-1">Buttons, links, headers</p>
                 </div>
 
                 <div>
@@ -213,11 +213,11 @@ export default function ThemePage() {
                       type="text"
                       value={theme.secondaryColor}
                       onChange={(e) => handleColorChange('secondaryColor', e.target.value)}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+                      className="flex-1 px-4 py-2 border border-themeBorder rounded-lg"
                       placeholder="#78350f"
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Backgrounds, accents</p>
+                  <p className="text-xs text-themeMuted mt-1">Backgrounds, accents</p>
                 </div>
 
                 <div>
@@ -233,11 +233,11 @@ export default function ThemePage() {
                       type="text"
                       value={theme.accentColor}
                       onChange={(e) => handleColorChange('accentColor', e.target.value)}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+                      className="flex-1 px-4 py-2 border border-themeBorder rounded-lg"
                       placeholder="#ea580c"
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Highlights, emphasis</p>
+                  <p className="text-xs text-themeMuted mt-1">Highlights, emphasis</p>
                 </div>
 
                 <div>
@@ -253,11 +253,11 @@ export default function ThemePage() {
                       type="text"
                       value={theme.borderColor}
                       onChange={(e) => handleColorChange('borderColor', e.target.value)}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+                      className="flex-1 px-4 py-2 border border-themeBorder rounded-lg"
                       placeholder="#e5e7eb"
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Dividers, borders</p>
+                  <p className="text-xs text-themeMuted mt-1">Dividers, borders</p>
                 </div>
 
                 <div>
@@ -273,11 +273,11 @@ export default function ThemePage() {
                       type="text"
                       value={theme.backgroundColor}
                       onChange={(e) => handleColorChange('backgroundColor', e.target.value)}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+                      className="flex-1 px-4 py-2 border border-themeBorder rounded-lg"
                       placeholder="#f9fafb"
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Page background</p>
+                  <p className="text-xs text-themeMuted mt-1">Page background</p>
                 </div>
 
                 <div>
@@ -293,11 +293,11 @@ export default function ThemePage() {
                       type="text"
                       value={theme.textPrimary}
                       onChange={(e) => handleColorChange('textPrimary', e.target.value)}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+                      className="flex-1 px-4 py-2 border border-themeBorder rounded-lg"
                       placeholder="#1f2937"
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Main text color</p>
+                  <p className="text-xs text-themeMuted mt-1">Main text color</p>
                 </div>
 
                 <div>
@@ -313,11 +313,11 @@ export default function ThemePage() {
                       type="text"
                       value={theme.textSecondary}
                       onChange={(e) => handleColorChange('textSecondary', e.target.value)}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+                      className="flex-1 px-4 py-2 border border-themeBorder rounded-lg"
                       placeholder="#6b7280"
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Secondary text, labels</p>
+                  <p className="text-xs text-themeMuted mt-1">Secondary text, labels</p>
                 </div>
               </div>
             </div>
@@ -332,10 +332,10 @@ export default function ThemePage() {
                     type="text"
                     value={theme.fontFamily}
                     onChange={(e) => handleTextChange('fontFamily', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-4 py-2 border border-themeBorder rounded-lg"
                     placeholder="system-ui, -apple-system, sans-serif"
                   />
-                  <p className="text-xs text-gray-500 mt-1">CSS font stack for body text</p>
+                  <p className="text-xs text-themeMuted mt-1">CSS font stack for body text</p>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-2">Heading Font Family</label>
@@ -343,10 +343,10 @@ export default function ThemePage() {
                     type="text"
                     value={theme.headingFont}
                     onChange={(e) => handleTextChange('headingFont', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-4 py-2 border border-themeBorder rounded-lg"
                     placeholder="system-ui, -apple-system, sans-serif"
                   />
-                  <p className="text-xs text-gray-500 mt-1">CSS font stack for headings</p>
+                  <p className="text-xs text-themeMuted mt-1">CSS font stack for headings</p>
                 </div>
               </div>
             </div>
@@ -393,7 +393,7 @@ export default function ThemePage() {
 
               {/* Color Swatches */}
               <div className="space-y-2 mb-6">
-                <p className="text-xs font-semibold text-gray-600 uppercase">Color Palette</p>
+                <p className="text-xs font-semibold text-themeMuted uppercase">Color Palette</p>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { name: 'Primary', color: theme.primaryColor },
@@ -405,7 +405,7 @@ export default function ThemePage() {
                   ].map((item) => (
                     <div key={item.name}>
                       <div
-                        className="w-full h-12 rounded-lg border border-gray-300"
+                        className="w-full h-12 rounded-lg border border-themeBorder"
                         style={{ backgroundColor: item.color }}
                       />
                       <p className="text-xs text-center mt-1">{item.name}</p>
@@ -425,7 +425,7 @@ export default function ThemePage() {
                 </button>
                 <button
                   onClick={resetToDefaults}
-                  className="w-full px-4 py-2 bg-gray-300 text-gray-900 rounded-lg hover:bg-gray-400 font-medium"
+                  className="w-full px-4 py-2 bg-gray-300 text-themeText rounded-lg hover:bg-gray-400 font-medium"
                 >
                   Reset to Defaults
                 </button>
