@@ -194,6 +194,12 @@ export default function AdminDashboard() {
         </div>
         <div className="flex gap-2">
           <Link
+            href="/admin/availability"
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg"
+          >
+            📅 Availability
+          </Link>
+          <Link
             href="/admin/theme"
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
           >
