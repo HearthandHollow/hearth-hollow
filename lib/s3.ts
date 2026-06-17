@@ -99,8 +99,7 @@ export async function getObjectBytes(
     throw new Error(`Empty body for S3 object: ${key}`);
   }
 
-  // @ts-expect-error transformToByteArray exists on the SDK v3 stream body
-  const bytes: Uint8Array = await result.Body.transformToByteArray();
+  const bytes = await result.Body.transformToByteArray();
   return {
     buffer: Buffer.from(bytes),
     contentType: result.ContentType || "application/octet-stream",
