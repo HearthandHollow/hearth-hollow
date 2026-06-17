@@ -60,6 +60,7 @@ export async function getAvailableDates(): Promise<string[]> {
   );
 
   const blockedSet = new Set(await getBlockedDateKeys());
+  const openSet = new Set(await getOpenDateKeys());
 
   const dates: string[] = [];
   const today = new Date();
@@ -70,8 +71,11 @@ export async function getAvailableDates(): Promise<string[]> {
   for (let i = 1; i <= windowDays; i++) {
     const d = new Date(start);
     d.setUTCDate(start.getUTCDate() + i);
-    if (!weekdayEnabled(settings, d.getUTCDay())) continue;
     const key = dateKey(d);
+    // Bookable if it's a normal working day OR a one-off opened day,
+    // and not explicitly closed or already taken.
+    const enabled = weekdayEnabled(settings, d.getUTCDay()) || openSet.has(key);
+    if (!enabled) continue;
     if (bookedSet.has(key)) continue;
     if (blockedSet.has(key)) continue;
     dates.push(key);
@@ -86,16 +90,46 @@ export async function getBlockedDateKeys(): Promise<string[]> {
   return rows.map((r) => dateKey(r.date));
 }
 
-/** Booked date keys with the customer name, for admin display. */
-export async function getBookedDates(): Promise<{ date: string; name: string }[]> {
+/** One-off opened date keys ("YYYY-MM-DD"). */
+export async function getOpenDateKeys(): Promise<string[]> {
+  if (!prisma) return [];
+  const rows = await prisma.openDate.findMany({ select: { date: true } });
+  return rows.map((r) => dateKey(r.date));
+}
+
+export interface BookedJob {
+  date: string;
+  id: string;
+  name: string;
+  category: string;
+  slot: string | null;
+  status: string;
+}
+
+/** Booked days with job details, for admin display. */
+export async function getBookedDates(): Promise<BookedJob[]> {
   if (!prisma) return [];
   const rows = await prisma.projectRequest.findMany({
     where: { scheduledDate: { not: null } },
-    select: { scheduledDate: true, customer: { select: { name: true } } },
+    select: {
+      id: true,
+      scheduledDate: true,
+      scheduledSlot: true,
+      category: true,
+      status: true,
+      customer: { select: { name: true } },
+    },
   });
   return rows
     .filter((r) => r.scheduledDate)
-    .map((r) => ({ date: dateKey(r.scheduledDate as Date), name: r.customer?.name || '' }));
+    .map((r) => ({
+      date: dateKey(r.scheduledDate as Date),
+      id: r.id,
+      name: r.customer?.name || '',
+      category: r.category,
+      slot: r.scheduledSlot,
+      status: r.status,
+    }));
 }
 
 /** Whether a specific date key is currently bookable (enabled weekday, in window, not taken). */

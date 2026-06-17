@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import {
   getAvailabilitySettings,
   getBlockedDateKeys,
+  getOpenDateKeys,
   getBookedDates,
 } from '@/lib/availability';
 
@@ -31,11 +32,12 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const settings = await getAvailabilitySettings();
-    const [blockedDates, bookedDates] = await Promise.all([
+    const [blockedDates, openDates, bookedDates] = await Promise.all([
       getBlockedDateKeys(),
+      getOpenDateKeys(),
       getBookedDates(),
     ]);
-    return NextResponse.json({ ...settings, blockedDates, bookedDates });
+    return NextResponse.json({ ...settings, blockedDates, openDates, bookedDates });
   } catch (error) {
     console.error('[admin/availability] GET', error);
     return NextResponse.json({ error: 'Failed to load settings' }, { status: 500 });

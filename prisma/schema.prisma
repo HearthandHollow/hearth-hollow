@@ -83,6 +83,14 @@ model BlockedDate {
   @@map("blocked_dates")
 }
 
+model OpenDate {
+  id        String   @id @default(cuid())
+  date      DateTime @unique // a one-off opened day (overrides a normally-off weekday)
+  createdAt DateTime @default(now())
+
+  @@map("open_dates")
+}
+
 model UploadedAsset {
   id         String     @id @default(cuid())
   projectId  String
