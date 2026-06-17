@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { verifySessionToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 type ApprovalStatus = 'awaiting_analysis' | 'awaiting_client_approval' | 'active' | 'denied'
@@ -8,7 +9,7 @@ export async function POST(req: NextRequest) {
   try {
     const cookieStore = await cookies()
     const sessionToken = cookieStore.get('admin_session')?.value
-    if (!sessionToken) {
+    if (!verifySessionToken(sessionToken)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

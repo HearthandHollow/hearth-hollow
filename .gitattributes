@@ -1,0 +1,4 @@
+# Normalize line endings to LF in the repo to stop the whole tree from showing
+# as "modified" on Windows checkouts. Run `git add --renormalize .` once (as its
+# own commit) to apply across all existing files.
+* text=auto eol=lf

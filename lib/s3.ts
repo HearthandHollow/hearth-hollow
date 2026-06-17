@@ -28,7 +28,10 @@ export async function uploadToS3(
   mimeType: string,
   projectId: string
 ): Promise<string> {
-  const bucketName = process.env.AWS_S3_BUCKET || 'hearth-and-hollow-quotes';
+  const bucketName =
+    process.env.AWS_S3_BUCKET_NAME ||
+    process.env.AWS_S3_BUCKET ||
+    'hearth-and-hollow-quotes';
   const region = process.env.AWS_REGION || 'us-east-2';
   
   console.log("[S3] Upload attempt:", { 
@@ -78,7 +81,10 @@ export async function uploadToS3(
 
 // Get a signed URL for an uploaded key
 export async function getSignedUrlForKey(key: string): Promise<string> {
-  const bucketName = process.env.AWS_S3_BUCKET || 'hearth-and-hollow-quotes';
+  const bucketName =
+    process.env.AWS_S3_BUCKET_NAME ||
+    process.env.AWS_S3_BUCKET ||
+    'hearth-and-hollow-quotes';
   
   console.log("[S3-SIGN] Generating signed URL for:", { key, bucketName });
   

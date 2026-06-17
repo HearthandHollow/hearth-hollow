@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { createActionToken } from "@/lib/auth";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -43,19 +44,26 @@ export async function sendEstimateEmail(
   includeActions: boolean = true
 ) {
   try {
-    const baseUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:3001';
+    // Prefer the public custom domain so links in emails point at the real site,
+    // falling back to the Vercel deployment URL, then localhost for dev.
+    const baseUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'http://localhost:3001');
+
+    const approveToken = createActionToken(`${projectId}:approve`);
+    const denyToken = createActionToken(`${projectId}:deny`);
 
     const approveButton = includeActions ? `
-      <a href="${baseUrl}/api/quotes/${projectId}/approve?email=${encodeURIComponent(customerEmail)}"
+      <a href="${baseUrl}/api/quotes/${projectId}/approve?token=${approveToken}"
          style="background-color: #22c55e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-right: 12px; display: inline-block; font-weight: bold;">
         ✓ Approve Quote
       </a>
     ` : '';
 
     const denyButton = includeActions ? `
-      <a href="${baseUrl}/api/quotes/${projectId}/deny?email=${encodeURIComponent(customerEmail)}"
+      <a href="${baseUrl}/api/quotes/${projectId}/deny?token=${denyToken}"
          style="background-color: #ef4444; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
         ✗ Decline Quote
       </a>

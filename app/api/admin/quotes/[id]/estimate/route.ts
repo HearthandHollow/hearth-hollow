@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { verifySessionToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export async function PATCH(
@@ -10,7 +11,7 @@ export async function PATCH(
     // Check admin session
     const cookieStore = await cookies()
     const sessionToken = cookieStore.get('admin_session')?.value
-    if (!sessionToken) {
+    if (!verifySessionToken(sessionToken)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

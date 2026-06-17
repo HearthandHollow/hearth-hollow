@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+// Theme is DB-backed; always render live instead of caching at build time.
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
+    if (!prisma) throw new Error('Database not available')
     let theme = await prisma.themeSettings.findFirst()
 
     if (!theme) {

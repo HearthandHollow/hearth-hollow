@@ -1,40 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { verifyActionToken } from '@/lib/auth'
+import { getBaseUrl } from '@/lib/site'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const baseUrl = getBaseUrl()
   try {
-    const searchParams = request.nextUrl.searchParams
-    const email = searchParams.get('email')
+    const token = request.nextUrl.searchParams.get('token')
 
-    if (!email) {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+    // Authorize via the signed token embedded in the emailed link.
+    if (!verifyActionToken(`${params.id}:deny`, token)) {
+      return NextResponse.redirect(`${baseUrl}/request?error=Invalid or expired link`)
     }
 
-    // Find and update the project request
     const project = await prisma.projectRequest.findUnique({
       where: { id: params.id },
       include: { customer: true },
     })
 
     if (!project) {
-      const baseUrl = process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : 'http://localhost:3001'
       return NextResponse.redirect(`${baseUrl}/request?error=Quote not found`)
     }
 
-    // Verify email matches
-    if (project.customer.email !== email) {
-      const baseUrl = process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : 'http://localhost:3001'
-      return NextResponse.redirect(`${baseUrl}/request?error=Unauthorized`)
-    }
-
-    // Update approval status
     await prisma.projectRequest.update({
       where: { id: params.id },
       data: {
@@ -46,16 +36,9 @@ export async function GET(
       },
     })
 
-    // Redirect to approval decline page
-    const baseUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:3001'
     return NextResponse.redirect(`${baseUrl}/quote-approval/${params.id}`)
   } catch (error) {
     console.error('Error denying quote:', error)
-    const baseUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:3001'
     return NextResponse.redirect(`${baseUrl}/request?error=Failed to decline quote`)
   }
 }

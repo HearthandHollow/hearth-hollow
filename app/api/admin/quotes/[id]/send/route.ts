@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendEstimateEmail } from '@/lib/email';
 
 async function isAuthenticated(req: NextRequest) {
   const cookieStore = await cookies();
-  return cookieStore.get('admin_session')?.value === 'authenticated';
+  return verifySessionToken(cookieStore.get('admin_session')?.value);
 }
 
 export async function POST(

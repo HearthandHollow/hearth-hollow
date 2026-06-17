@@ -9,7 +9,12 @@ if (process.env.DATABASE_URL) {
   prismaInstance =
     globalForPrisma.prisma ||
     new PrismaClient({
-      log: ["query"],
+      // Avoid logging every query (and its parameters) in production, which is
+      // noisy and can leak customer PII into logs.
+      log:
+        process.env.NODE_ENV === "production"
+          ? ["error", "warn"]
+          : ["query", "error", "warn"],
     });
 
   if (process.env.NODE_ENV !== "production")
