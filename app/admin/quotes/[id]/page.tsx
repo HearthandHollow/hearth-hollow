@@ -16,6 +16,8 @@ interface Quote {
   emailSentAt?: string;
   clientApprovedAt?: string;
   clientDeniedAt?: string;
+  scheduledDate?: string | null;
+  scheduledSlot?: string | null;
   customer?: {
     name: string;
     email: string;
@@ -402,6 +404,21 @@ export default function QuoteDetailPage() {
             <div>
               <h1 className="text-3xl font-bold mb-2">Quote #{quote.id.substring(0, 8)}</h1>
               <p className="text-gray-600">Status: <span className="font-semibold capitalize">{quote.status}</span></p>
+              {quote.scheduledDate && (
+                <p className="text-gray-600 mt-1">
+                  📅 Scheduled:{' '}
+                  <span className="font-semibold">
+                    {new Date(`${quote.scheduledDate.slice(0, 10)}T12:00:00Z`).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                      timeZone: 'UTC',
+                    })}
+                  </span>
+                  {quote.scheduledSlot ? ` — ${quote.scheduledSlot === 'afternoon' ? 'Afternoon' : 'Morning'}` : ''}
+                </p>
+              )}
             </div>
             <div className="flex gap-2">
               {quote.status !== 'sent' && (

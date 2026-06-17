@@ -131,3 +131,47 @@ export async function sendCustomEmail(
     throw error;
   }
 }
+
+export async function sendBookingConfirmationEmail(
+  customerEmail: string,
+  customerName: string,
+  dateKey: string, // "YYYY-MM-DD"
+  slot: string, // "morning" | "afternoon"
+  projectId: string
+) {
+  // Format the date for display (noon UTC avoids day-shift in US timezones).
+  const d = new Date(`${dateKey}T12:00:00Z`);
+  const prettyDate = d.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  const prettySlot = slot === "afternoon" ? "Afternoon" : "Morning";
+
+  try {
+    const result = await resend.emails.send({
+      from: SENDER_EMAIL,
+      to: customerEmail,
+      reply_to: "quotes@thehearthhollow.com",
+      subject: `Your appointment is booked — ${prettyDate}`,
+      html: `
+        <h2>You're booked, ${customerName}!</h2>
+        <p>Thanks for scheduling your project with The Hearth &amp; Hollow. Here are your details:</p>
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0;"><strong>Date:</strong> ${prettyDate}</p>
+          <p style="margin: 8px 0 0;"><strong>Time:</strong> ${prettySlot}</p>
+          <p style="margin: 8px 0 0;"><strong>Reference:</strong> ${projectId}</p>
+        </div>
+        <p>We'll confirm the exact arrival time with you closer to the date. If you need to change anything, just reply to this email.</p>
+        <p>Best regards,<br/>The Hearth &amp; Hollow Team</p>
+      `,
+      text: `You're booked, ${customerName}!\n\nDate: ${prettyDate}\nTime: ${prettySlot}\nReference: ${projectId}\n\nWe'll confirm the exact arrival time closer to the date. Reply to this email with any changes.\n\nThe Hearth & Hollow Team`,
+    });
+    return result;
+  } catch (error) {
+    console.error("Failed to send booking confirmation email:", error);
+    throw error;
+  }
+}

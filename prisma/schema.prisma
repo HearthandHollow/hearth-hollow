@@ -40,6 +40,11 @@ model ProjectRequest {
   clientDeniedAt   DateTime?
   emailSentAt      DateTime?
 
+  // Scheduling (client picks a date after approving)
+  scheduledDate DateTime?  // the booked day (date only; time of day in scheduledSlot)
+  scheduledSlot String?    // "morning" | "afternoon" preference
+  scheduledAt   DateTime?  // when the client made the booking
+
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -47,6 +52,27 @@ model ProjectRequest {
   estimate       Estimate?
 
   @@map("project_requests")
+}
+
+model AvailabilitySettings {
+  id String @id @default(cuid())
+
+  // Which weekdays are bookable
+  sunday    Boolean @default(false)
+  monday    Boolean @default(false)
+  tuesday   Boolean @default(false)
+  wednesday Boolean @default(false)
+  thursday  Boolean @default(true)
+  friday    Boolean @default(true)
+  saturday  Boolean @default(true)
+
+  // How far ahead clients can book
+  bookingWindowWeeks Int @default(8)
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@map("availability_settings")
 }
 
 model UploadedAsset {
