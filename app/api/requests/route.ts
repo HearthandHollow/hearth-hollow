@@ -17,6 +17,37 @@ const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
 ]);
 
+// HEIC (and some other formats) often arrive with an empty/unknown MIME type
+// from the browser, so we also accept by file extension.
+const ALLOWED_EXTENSIONS = new Set([
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+  "gif",
+  "heic",
+  "heif",
+  "pdf",
+]);
+
+function extOf(name: string): string {
+  const m = /\.([a-z0-9]+)$/i.exec(name || "");
+  return m ? m[1].toLowerCase() : "";
+}
+
+function mimeForFile(file: File): string {
+  if (file.type) return file.type;
+  const ext = extOf(file.name);
+  if (ext === "heic") return "image/heic";
+  if (ext === "heif") return "image/heif";
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  if (ext === "png") return "image/png";
+  if (ext === "webp") return "image/webp";
+  if (ext === "gif") return "image/gif";
+  if (ext === "pdf") return "application/pdf";
+  return "application/octet-stream";
+}
+
 const MAX_NAME = 200;
 const MAX_EMAIL = 320;
 const MAX_PHONE = 40;
@@ -119,9 +150,12 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      if (!ALLOWED_MIME_TYPES.has(file.type)) {
+      const typeOk =
+        ALLOWED_MIME_TYPES.has(file.type) ||
+        ALLOWED_EXTENSIONS.has(extOf(file.name));
+      if (!typeOk) {
         return NextResponse.json(
-          { error: `Unsupported file type: ${file.type || "unknown"}` },
+          { error: `Unsupported file type: ${file.type || extOf(file.name) || "unknown"}` },
           { status: 400 }
         );
       }
@@ -151,10 +185,11 @@ export async function POST(req: NextRequest) {
     for (const file of files) {
       try {
         const buffer = await file.arrayBuffer();
+        const mimeType = mimeForFile(file);
         const s3Url = await uploadToS3(
           buffer,
           file.name,
-          file.type,
+          mimeType,
           projectRequest.id
         );
 
@@ -163,7 +198,7 @@ export async function POST(req: NextRequest) {
             projectId: projectRequest.id,
             filename: file.name,
             s3Url,
-            mimeType: file.type,
+            mimeType,
             fileSize: file.size,
           },
         });

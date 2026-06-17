@@ -249,7 +249,7 @@ export default function RequestPage() {
               <input
                 type="file"
                 multiple
-                accept="image/*"
+                accept="image/*,.heic,.heif"
                 onChange={handleFileChange}
                 className="hidden"
                 id="file-input"
@@ -257,7 +257,7 @@ export default function RequestPage() {
               <label htmlFor="file-input" className="cursor-pointer">
                 <div className="text-4xl mb-2">📸</div>
                 <p className="font-semibold">Click to upload or drag and drop</p>
-                <p className="text-sm text-themeMuted">PNG, JPG, GIF</p>
+                <p className="text-sm text-themeMuted">PNG, JPG, HEIC, GIF</p>
               </label>
             </div>
 
