@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 // Check if user is authenticated
 async function isAuthenticated(req: NextRequest) {
   const cookieStore = await cookies();
