@@ -49,6 +49,24 @@ interface AssetWithSignedUrl {
   signedUrlError?: string;
 }
 
+interface EmailMsg {
+  id: string;
+  from: string;
+  to: string;
+  date: string;
+  subject: string;
+  snippet: string;
+  body: string;
+}
+
+interface EmailAnalysis {
+  summary: string;
+  requestedChanges: string[];
+  newDetails: string[];
+  suggestedEstimate: { low: number; expected: number; high: number } | null;
+  reasoning: string;
+}
+
 export default function QuoteDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -78,9 +96,21 @@ export default function QuoteDetailPage() {
   const [imageLoadErrors, setImageLoadErrors] = useState<Record<string, boolean>>({});
   const [changingStatus, setChangingStatus] = useState(false);
   const [includePhotos, setIncludePhotos] = useState(false);
+  const [emails, setEmails] = useState<EmailMsg[]>([]);
+  const [emailsConfigured, setEmailsConfigured] = useState(true);
+  const [emailsLoading, setEmailsLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [replyText, setReplyText] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
+  const [analyzingEmails, setAnalyzingEmails] = useState(false);
+  const [emailAnalysis, setEmailAnalysis] = useState<EmailAnalysis | null>(null);
 
   useEffect(() => {
     fetchQuote();
+  }, [quoteId]);
+
+  useEffect(() => {
+    fetchEmails();
   }, [quoteId]);
 
   const fetchQuote = async () => {
@@ -250,6 +280,76 @@ export default function QuoteDetailPage() {
     } finally {
       setChangingStatus(false);
     }
+  };
+
+  const fetchEmails = async () => {
+    setEmailsLoading(true);
+    setEmailError('');
+    try {
+      const res = await fetch(`/api/admin/quotes/${quoteId}/emails`);
+      if (res.status === 401) {
+        router.push('/admin');
+        return;
+      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load conversation');
+      setEmailsConfigured(data.configured !== false);
+      setEmails(data.messages || []);
+    } catch (err) {
+      setEmailError(err instanceof Error ? err.message : 'Failed to load conversation');
+    } finally {
+      setEmailsLoading(false);
+    }
+  };
+
+  const handleSendReply = async () => {
+    if (!replyText.trim()) return;
+    setSendingReply(true);
+    setEmailError('');
+    try {
+      const res = await fetch(`/api/admin/quotes/${quoteId}/emails/reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: replyText }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send reply');
+      setEmails(data.messages || emails);
+      setReplyText('');
+    } catch (err) {
+      setEmailError(err instanceof Error ? err.message : 'Failed to send reply');
+    } finally {
+      setSendingReply(false);
+    }
+  };
+
+  const handleAnalyzeEmails = async () => {
+    setAnalyzingEmails(true);
+    setEmailError('');
+    setEmailAnalysis(null);
+    try {
+      const res = await fetch(`/api/admin/quotes/${quoteId}/emails/analyze`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to analyze conversation');
+      setEmailAnalysis(data);
+    } catch (err) {
+      setEmailError(err instanceof Error ? err.message : 'Failed to analyze conversation');
+    } finally {
+      setAnalyzingEmails(false);
+    }
+  };
+
+  const applySuggestedEstimate = () => {
+    if (!emailAnalysis?.suggestedEstimate) return;
+    setEstimateEditData({
+      ...estimateEditData,
+      lowEstimate: emailAnalysis.suggestedEstimate.low,
+      expectedEstimate: emailAnalysis.suggestedEstimate.expected,
+      highEstimate: emailAnalysis.suggestedEstimate.high,
+    });
+    setIsEditingEstimate(true);
   };
 
   if (loading) {
@@ -710,6 +810,132 @@ export default function QuoteDetailPage() {
 
           {!quote.estimate && (
             <p className="text-gray-600">No analysis yet. Click "Analyze" to generate an estimate.</p>
+          )}
+        </div>
+
+        {/* Conversation */}
+        <div className="bg-white rounded-lg shadow-md p-8 mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">Conversation</h2>
+            <div className="flex gap-2">
+              <button
+                onClick={fetchEmails}
+                disabled={emailsLoading}
+                className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 text-sm font-semibold"
+              >
+                {emailsLoading ? 'Loading...' : 'Refresh'}
+              </button>
+              {emails.length > 0 && (
+                <button
+                  onClick={handleAnalyzeEmails}
+                  disabled={analyzingEmails}
+                  className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 text-sm font-semibold"
+                >
+                  {analyzingEmails ? 'Analyzing...' : 'Analyze emails'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {!emailsConfigured && (
+            <p className="text-gray-600 text-sm">
+              Email integration isn&apos;t configured yet. Add the Gmail OAuth environment variables to enable the conversation view.
+            </p>
+          )}
+
+          {emailsConfigured && emailError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+              {emailError}
+            </div>
+          )}
+
+          {emailsConfigured && !emailsLoading && emails.length === 0 && !emailError && (
+            <p className="text-gray-600 text-sm">
+              No emails found for this quote yet. Customer replies will appear here once they respond.
+            </p>
+          )}
+
+          {emailAnalysis && (
+            <div className="mb-6 p-5 bg-purple-50 border-2 border-purple-200 rounded-lg">
+              <h3 className="font-bold text-purple-900 mb-2">AI Summary</h3>
+              <p className="text-sm text-gray-700 mb-3">{emailAnalysis.summary}</p>
+              {emailAnalysis.requestedChanges?.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-sm font-semibold text-gray-700">Customer is asking for:</p>
+                  <ul className="list-disc list-inside text-sm text-gray-700">
+                    {emailAnalysis.requestedChanges.map((c, i) => (
+                      <li key={i}>{c}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {emailAnalysis.newDetails?.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-sm font-semibold text-gray-700">New details:</p>
+                  <ul className="list-disc list-inside text-sm text-gray-700">
+                    {emailAnalysis.newDetails.map((c, i) => (
+                      <li key={i}>{c}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {emailAnalysis.suggestedEstimate ? (
+                <div className="mt-3 p-3 bg-white rounded border border-purple-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-1">Suggested estimate</p>
+                  <p className="text-sm text-gray-700">
+                    Low ${emailAnalysis.suggestedEstimate.low.toLocaleString()} · Expected ${emailAnalysis.suggestedEstimate.expected.toLocaleString()} · High ${emailAnalysis.suggestedEstimate.high.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">{emailAnalysis.reasoning}</p>
+                  <button
+                    onClick={applySuggestedEstimate}
+                    className="mt-2 px-3 py-1 bg-amber-600 text-white rounded text-sm hover:bg-amber-700 font-semibold"
+                  >
+                    Review &amp; apply to estimate
+                  </button>
+                </div>
+              ) : (
+                emailAnalysis.reasoning && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    No pricing change suggested. {emailAnalysis.reasoning}
+                  </p>
+                )
+              )}
+            </div>
+          )}
+
+          {emails.length > 0 && (
+            <div className="space-y-3 mb-6">
+              {emails.map((m) => (
+                <div key={m.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between items-baseline mb-1">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{m.from}</p>
+                    <p className="text-xs text-gray-500 ml-2 whitespace-nowrap">{m.date}</p>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-2">{m.subject}</p>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{m.body || m.snippet}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {emailsConfigured && emails.length > 0 && (
+            <div className="border-t pt-4">
+              <label className="block text-sm font-semibold mb-2">Reply to customer</label>
+              <textarea
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                rows={4}
+                placeholder="Type your reply..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-2"
+              />
+              <button
+                onClick={handleSendReply}
+                disabled={sendingReply || !replyText.trim()}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-semibold"
+              >
+                {sendingReply ? 'Sending...' : 'Send Reply'}
+              </button>
+            </div>
           )}
         </div>
       </div>
