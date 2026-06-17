@@ -75,6 +75,14 @@ model AvailabilitySettings {
   @@map("availability_settings")
 }
 
+model BlockedDate {
+  id        String   @id @default(cuid())
+  date      DateTime @unique // a specific closed-off day (stored at noon UTC)
+  createdAt DateTime @default(now())
+
+  @@map("blocked_dates")
+}
+
 model UploadedAsset {
   id         String     @id @default(cuid())
   projectId  String

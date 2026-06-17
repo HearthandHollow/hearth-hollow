@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { getAvailabilitySettings } from '@/lib/availability';
+import {
+  getAvailabilitySettings,
+  getBlockedDateKeys,
+  getBookedDates,
+} from '@/lib/availability';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +31,11 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const settings = await getAvailabilitySettings();
-    return NextResponse.json(settings);
+    const [blockedDates, bookedDates] = await Promise.all([
+      getBlockedDateKeys(),
+      getBookedDates(),
+    ]);
+    return NextResponse.json({ ...settings, blockedDates, bookedDates });
   } catch (error) {
     console.error('[admin/availability] GET', error);
     return NextResponse.json({ error: 'Failed to load settings' }, { status: 500 });

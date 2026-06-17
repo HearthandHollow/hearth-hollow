@@ -59,6 +59,8 @@ export async function getAvailableDates(): Promise<string[]> {
       .filter((x): x is string => !!x)
   );
 
+  const blockedSet = new Set(await getBlockedDateKeys());
+
   const dates: string[] = [];
   const today = new Date();
   const start = new Date(
@@ -71,9 +73,29 @@ export async function getAvailableDates(): Promise<string[]> {
     if (!weekdayEnabled(settings, d.getUTCDay())) continue;
     const key = dateKey(d);
     if (bookedSet.has(key)) continue;
+    if (blockedSet.has(key)) continue;
     dates.push(key);
   }
   return dates;
+}
+
+/** Manually closed-off date keys ("YYYY-MM-DD"). */
+export async function getBlockedDateKeys(): Promise<string[]> {
+  if (!prisma) return [];
+  const rows = await prisma.blockedDate.findMany({ select: { date: true } });
+  return rows.map((r) => dateKey(r.date));
+}
+
+/** Booked date keys with the customer name, for admin display. */
+export async function getBookedDates(): Promise<{ date: string; name: string }[]> {
+  if (!prisma) return [];
+  const rows = await prisma.projectRequest.findMany({
+    where: { scheduledDate: { not: null } },
+    select: { scheduledDate: true, customer: { select: { name: true } } },
+  });
+  return rows
+    .filter((r) => r.scheduledDate)
+    .map((r) => ({ date: dateKey(r.scheduledDate as Date), name: r.customer?.name || '' }));
 }
 
 /** Whether a specific date key is currently bookable (enabled weekday, in window, not taken). */
