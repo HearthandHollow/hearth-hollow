@@ -17,6 +17,10 @@ interface ThemeSettings {
   headingFont: string;
   siteName: string;
   siteDescription: string;
+  heroImageUrl: string;
+  craftImageUrl: string;
+  gatheringImageUrl: string;
+  homesteadImageUrl: string;
 }
 
 export default function ThemePage() {
@@ -98,6 +102,10 @@ export default function ThemePage() {
         headingFont: 'system-ui, -apple-system, sans-serif',
         siteName: 'Hearth & Hollow',
         siteDescription: 'Custom handyman and carpentry services',
+        heroImageUrl: 'https://images.unsplash.com/photo-1757605327126-9baefea3348b?auto=format&fit=crop&w=1600&q=80',
+        craftImageUrl: 'https://images.unsplash.com/photo-1631396326646-c06a935ff3a6?auto=format&fit=crop&w=1200&q=80',
+        gatheringImageUrl: 'https://images.unsplash.com/photo-1746701905946-f1babf656914?auto=format&fit=crop&w=1200&q=80',
+        homesteadImageUrl: 'https://images.unsplash.com/photo-1771425890623-f17451025495?auto=format&fit=crop&w=1200&q=80',
       });
     }
   };
@@ -173,6 +181,64 @@ export default function ThemePage() {
                     className="w-full px-4 py-2 border border-themeBorder rounded-lg"
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Homepage Images */}
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+              <h2 className="text-xl font-bold mb-1">Homepage Images</h2>
+              <p className="text-xs text-themeMuted mb-4">
+                Paste a direct image URL for each slot. Swap these out for your own photos any
+                time — the homepage updates automatically, no code changes needed.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {[
+                  {
+                    field: 'heroImageUrl' as const,
+                    label: 'Hero Image',
+                    caption: 'Large banner image at the top of the homepage',
+                  },
+                  {
+                    field: 'craftImageUrl' as const,
+                    label: 'Craft & Carpentry Image',
+                    caption: 'Hands-on, hand-crafted woodworking shot',
+                  },
+                  {
+                    field: 'gatheringImageUrl' as const,
+                    label: 'The Hollow — Gathering Image',
+                    caption: 'A warm, rustic space built for gathering',
+                  },
+                  {
+                    field: 'homesteadImageUrl' as const,
+                    label: 'Homestead Lifestyle Image',
+                    caption: 'A peek into the homesteading way of life',
+                  },
+                ].map(({ field, label, caption }) => (
+                  <div key={field}>
+                    <label className="block text-sm font-semibold mb-2">{label}</label>
+                    <div className="w-full h-32 rounded-lg overflow-hidden border border-themeBorder bg-gray-100 mb-2">
+                      {theme[field] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={theme[field]}
+                          alt={label}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.opacity = '0.2';
+                          }}
+                        />
+                      ) : null}
+                    </div>
+                    <input
+                      type="text"
+                      value={theme[field]}
+                      onChange={(e) => handleTextChange(field, e.target.value)}
+                      className="w-full px-4 py-2 border border-themeBorder rounded-lg text-sm"
+                      placeholder="https://example.com/photo.jpg"
+                    />
+                    <p className="text-xs text-themeMuted mt-1">{caption}</p>
+                  </div>
+                ))}
               </div>
             </div>
 
