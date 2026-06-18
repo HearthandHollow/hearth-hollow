@@ -95,7 +95,11 @@ export async function POST(
         </table>`
       : '';
 
-    // Build estimate details HTML — show only the selected tier's price
+    // Build estimate details HTML — show only the selected tier's price.
+    // IMPORTANT: never include `quote.estimate.breakdown` here — it's an
+    // internal admin-facing summary that lists the low/expected/high
+    // estimates verbatim, which would leak the other pricing tiers to the
+    // customer.
     const estimateHtml = `
       <h3>Estimate</h3>
       <p style="font-size:1.25em;"><strong>$${tierAmount.toLocaleString()}</strong></p>
@@ -105,9 +109,6 @@ export async function POST(
       ${materialTableHtml}
 
       ${quote.estimate.materialRequirements ? `<h3>Additional Material Notes</h3><p>${quote.estimate.materialRequirements}</p>` : ''}
-
-      <h3>Breakdown</h3>
-      <pre>${quote.estimate.breakdown}</pre>
     `;
 
     let emailSent = false;

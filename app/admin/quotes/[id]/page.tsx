@@ -146,6 +146,7 @@ export default function QuoteDetailPage() {
   const [sendingInvoice, setSendingInvoice] = useState(false);
   const [invoiceError, setInvoiceError] = useState('');
   const [invoiceSentMsg, setInvoiceSentMsg] = useState('');
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState('');
 
   useEffect(() => {
     fetchQuote();
@@ -158,6 +159,21 @@ export default function QuoteDetailPage() {
   useEffect(() => {
     fetchInvoice();
   }, [quoteId]);
+
+  // Keep the estimate edit form in sync with whatever the server currently
+  // has stored. Called after every fetch/analyze/save so "Edit Estimate"
+  // never opens to stale or blank fields.
+  const syncEstimateEditData = (estimate: any) => {
+    setEstimateEditData({
+      lowEstimate: estimate.lowEstimate,
+      expectedEstimate: estimate.expectedEstimate,
+      highEstimate: estimate.highEstimate,
+      breakdown: estimate.breakdown,
+      materialRequirements: estimate.materialRequirements || '',
+      timeEstimation: estimate.timeEstimation || '',
+      materialList: Array.isArray(estimate.materialList) ? estimate.materialList : [],
+    });
+  };
 
   const fetchQuote = async () => {
     try {
@@ -178,15 +194,7 @@ export default function QuoteDetailPage() {
 
       // Initialize estimate edit data
       if (data.estimate) {
-        setEstimateEditData({
-          lowEstimate: data.estimate.lowEstimate,
-          expectedEstimate: data.estimate.expectedEstimate,
-          highEstimate: data.estimate.highEstimate,
-          breakdown: data.estimate.breakdown,
-          materialRequirements: data.estimate.materialRequirements || '',
-          timeEstimation: data.estimate.timeEstimation || '',
-          materialList: Array.isArray(data.estimate.materialList) ? data.estimate.materialList : [],
-        });
+        syncEstimateEditData(data.estimate);
       }
 
       // Initialize schedule edit fields
@@ -240,6 +248,9 @@ export default function QuoteDetailPage() {
       if (!response.ok) throw new Error('Analysis failed');
       const data = await response.json();
       setQuote(data);
+      if (data.estimate) {
+        syncEstimateEditData(data.estimate);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to analyze quote');
     } finally {
@@ -309,6 +320,7 @@ export default function QuoteDetailPage() {
       if (!response.ok) throw new Error('Failed to save estimate');
       const data = await response.json();
       setQuote(prev => prev ? { ...prev, estimate: data } : null);
+      syncEstimateEditData(data);
       setIsEditingEstimate(false);
       setError('');
     } catch (err) {
@@ -591,7 +603,9 @@ export default function QuoteDetailPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to save invoice');
       setInvoice(data.invoice);
-      window.open(`/api/admin/quotes/${quoteId}/invoice/pdf`, '_blank');
+      // Preview inline on this page rather than opening/downloading a new
+      // tab. Cache-bust so the iframe always reflects the just-saved version.
+      setPdfPreviewUrl(`/api/admin/quotes/${quoteId}/invoice/pdf?t=${Date.now()}`);
     } catch (err) {
       setInvoiceError(err instanceof Error ? err.message : 'Failed to save invoice');
     } finally {
@@ -1018,7 +1032,10 @@ export default function QuoteDetailPage() {
             <div className="flex flex-wrap gap-2">
               {quote.estimate && !isEditingEstimate && (
                 <button
-                  onClick={() => setIsEditingEstimate(true)}
+                  onClick={() => {
+                    syncEstimateEditData(quote.estimate);
+                    setIsEditingEstimate(true);
+                  }}
                   className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brandDark font-semibold"
                 >
                   Edit Estimate
@@ -1528,7 +1545,7 @@ export default function QuoteDetailPage() {
                 {invoice.sentAt ? ` · Sent ${new Date(invoice.sentAt).toLocaleDateString()}` : ''}
               </p>
               <button
-                onClick={() => window.open(`/api/admin/quotes/${quoteId}/invoice/pdf`, '_blank')}
+                onClick={() => setPdfPreviewUrl(`/api/admin/quotes/${quoteId}/invoice/pdf?t=${Date.now()}`)}
                 className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent font-semibold text-sm"
               >
                 View PDF
@@ -1545,6 +1562,26 @@ export default function QuoteDetailPage() {
 
           {!showInvoiceEditor && !invoice && !invoiceLoading && (
             <p className="text-themeMuted text-sm">No invoice yet. Click "Create Invoice" to build one from the estimate.</p>
+          )}
+
+          {pdfPreviewUrl && (
+            <div className="mt-4 border border-themeBorder rounded-lg overflow-hidden">
+              <div className="flex justify-between items-center px-3 py-2 bg-gray-50 border-b border-themeBorder">
+                <p className="text-sm font-semibold text-themeMuted">Invoice PDF Preview</p>
+                <button
+                  onClick={() => setPdfPreviewUrl('')}
+                  className="text-sm text-themeMuted hover:text-brand font-semibold"
+                >
+                  Close Preview
+                </button>
+              </div>
+              <iframe
+                src={pdfPreviewUrl}
+                title="Invoice PDF Preview"
+                className="w-full"
+                style={{ height: '70vh', border: 'none' }}
+              />
+            </div>
           )}
         </div>
       </div>
