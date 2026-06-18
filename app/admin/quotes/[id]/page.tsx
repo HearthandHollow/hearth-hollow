@@ -567,6 +567,32 @@ export default function QuoteDetailPage() {
     setInvoiceSentMsg('');
   };
 
+  // "Create Invoice" — one click: builds the invoice from the estimate,
+  // saves it, and shows the PDF preview immediately. No editor step
+  // required first; use "Edit Invoice" afterward to tweak line items.
+  const handleCreateInvoice = async () => {
+    const items = invoiceLineItems.length > 0 ? invoiceLineItems : buildDefaultLineItems();
+    setInvoiceLineItems(items);
+    setSavingInvoice(true);
+    setInvoiceError('');
+    setInvoiceSentMsg('');
+    try {
+      const res = await fetch(`/api/admin/quotes/${quoteId}/invoice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lineItems: items, notes: invoiceNotes }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create invoice');
+      setInvoice(data.invoice);
+      setPdfPreviewUrl(`/api/admin/quotes/${quoteId}/invoice/pdf?t=${Date.now()}`);
+    } catch (err) {
+      setInvoiceError(err instanceof Error ? err.message : 'Failed to create invoice');
+    } finally {
+      setSavingInvoice(false);
+    }
+  };
+
   const addInvoiceRow = () => {
     setInvoiceLineItems((prev) => [...prev, { description: '', quantity: 1, unitPrice: 0 }]);
   };
@@ -606,6 +632,10 @@ export default function QuoteDetailPage() {
       // Preview inline on this page rather than opening/downloading a new
       // tab. Cache-bust so the iframe always reflects the just-saved version.
       setPdfPreviewUrl(`/api/admin/quotes/${quoteId}/invoice/pdf?t=${Date.now()}`);
+      // Close the editor automatically so the Email button (which only
+      // shows outside the editor) is available right away — no separate
+      // "Close" click required before emailing.
+      setShowInvoiceEditor(false);
     } catch (err) {
       setInvoiceError(err instanceof Error ? err.message : 'Failed to save invoice');
     } finally {
@@ -1439,11 +1469,11 @@ export default function QuoteDetailPage() {
             </h2>
             {!showInvoiceEditor && (
               <button
-                onClick={handleOpenInvoiceEditor}
-                disabled={invoiceLoading}
+                onClick={invoice ? handleOpenInvoiceEditor : handleCreateInvoice}
+                disabled={invoiceLoading || savingInvoice}
                 className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent disabled:opacity-50 font-semibold"
               >
-                {invoice ? 'Edit Invoice' : 'Create Invoice'}
+                {savingInvoice ? 'Creating…' : invoice ? 'Edit Invoice' : 'Create Invoice'}
               </button>
             )}
           </div>
