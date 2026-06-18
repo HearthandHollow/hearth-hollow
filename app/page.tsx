@@ -14,7 +14,10 @@ export default function Home() {
             </h1>
             <p className="text-sm text-themeMuted">Crafted for Self-Sufficiency • Built to Last</p>
           </div>
-          <nav className="flex gap-4">
+          <nav className="flex gap-4 items-center">
+            <Link href="/gallery" className="px-4 py-2 text-themeMuted hover:text-themeText">
+              Our Work
+            </Link>
             <Link href="/request" className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brandDark">
               Request Quote
             </Link>
