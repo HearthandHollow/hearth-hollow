@@ -91,7 +91,7 @@ export default function AdminGalleryPage() {
               <input
                 id="gallery-file"
                 type="file"
-                accept="image/*"
+                accept="image/*,.heic,.heif"
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
                 className="block text-sm"
               />

@@ -3,11 +3,32 @@ import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { uploadToS3 } from '@/lib/s3';
+import { isHeic, heicToJpeg } from '@/lib/image';
 
 export const dynamic = 'force-dynamic';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif']);
+const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif']);
+
+function extOf(name: string): string {
+  const m = /\.([a-z0-9]+)$/i.exec(name || '');
+  return m ? m[1].toLowerCase() : '';
+}
+
+// HEIC (and some other formats) often arrive with an empty/unknown MIME type
+// from the browser, so derive one from the extension when needed.
+function mimeForFile(file: File): string {
+  if (file.type) return file.type;
+  const ext = extOf(file.name);
+  if (ext === 'heic') return 'image/heic';
+  if (ext === 'heif') return 'image/heif';
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+  if (ext === 'png') return 'image/png';
+  if (ext === 'webp') return 'image/webp';
+  if (ext === 'gif') return 'image/gif';
+  return 'application/octet-stream';
+}
 
 async function isAuthenticated() {
   const cookieStore = await cookies();
@@ -40,12 +61,28 @@ export async function POST(req: NextRequest) {
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json({ error: 'Image must be 10 MB or smaller' }, { status: 400 });
     }
-    if (!ALLOWED.has(file.type)) {
-      return NextResponse.json({ error: `Unsupported file type: ${file.type || 'unknown'}` }, { status: 400 });
+
+    let mimeType = mimeForFile(file);
+    if (!ALLOWED.has(mimeType) && !ALLOWED_EXTENSIONS.has(extOf(file.name))) {
+      return NextResponse.json({ error: `Unsupported file type: ${file.type || extOf(file.name) || 'unknown'}` }, { status: 400 });
     }
 
-    const buffer = await file.arrayBuffer();
-    const s3Key = await uploadToS3(buffer, file.name, file.type, 'gallery');
+    let buffer: ArrayBuffer | Buffer = await file.arrayBuffer();
+    let filename = file.name;
+
+    // Convert HEIC/HEIF to JPEG so it previews in the browser. Falls back to
+    // the original on any conversion failure.
+    if (isHeic(mimeType, filename)) {
+      try {
+        buffer = await heicToJpeg(Buffer.from(buffer));
+        filename = filename.replace(/\.(heic|heif)$/i, '') + '.jpg';
+        mimeType = 'image/jpeg';
+      } catch (convErr) {
+        console.error(`[HEIC] gallery conversion failed for ${file.name}, keeping original:`, convErr);
+      }
+    }
+
+    const s3Key = await uploadToS3(buffer, filename, mimeType, 'gallery');
 
     const created = await prisma.galleryImage.create({
       data: { s3Key, caption: caption || null },
