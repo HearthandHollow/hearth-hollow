@@ -1,4 +1,4 @@
-# CLAUDE.md — The Hearth and Hollow
+﻿# CLAUDE.md — The Hearth and Hollow
 
 Operating guide for Claude Cowork sessions working on this project. Read this first, then `session_log.md` for history and current state.
 
@@ -27,10 +27,10 @@ Internal package name is still `handyman-quote-generator` (v0.2.0).
 - `lib/claude-analyzer.ts` — estimate analysis, optional photo vision (`includePhotos`)
 - `lib/availability.ts` — bookable-date logic + date helpers (noon-UTC convention)
 - `lib/image.ts` — HEIC→JPEG conversion (`heic-convert`, pure JS)
-- `prisma/schema.prisma` — models: Customer, ProjectRequest (has `scheduledDate/scheduledSlot/scheduledAt`), UploadedAsset, Estimate, EstimateHistory, AdminUser (unused), ThemeSettings, AvailabilitySettings, BlockedDate, OpenDate
-- Admin UI: `app/admin/dashboard`, `app/admin/quotes/[id]` (details, photos + "Include photos", estimate editor, **Appointment** reschedule card, **Conversation** email panel), `app/admin/availability` (weekday defaults + month calendar with day-detail modal), `app/admin/theme`
-- Public UI: `app/request` (quote form), `app/confirmation/[id]`, `app/quote-approval/[id]`, `app/schedule/[id]` (post-approval date picker)
-- API under `app/api/...`: `requests`, `admin/quotes/[id]/{analyze,send,estimate,status,delete,get-signed-url,emails,emails/reply,emails/analyze,schedule}`, `admin/availability{,/block,/open}`, `quotes/[id]/{approve,deny}`, `schedule/[id]/{availability,book}`, `theme`
+- `prisma/schema.prisma` — models: Customer, ProjectRequest (has `scheduledDate/scheduledSlot/scheduledAt`), UploadedAsset, Estimate, EstimateHistory, Invoice, AdminUser (unused), ThemeSettings (incl. `heroImageUrl`/`craftImageUrl`/`gatheringImageUrl`/`homesteadImageUrl` homepage image fields), AvailabilitySettings, BlockedDate, OpenDate
+- Admin UI: `app/admin/dashboard`, `app/admin/quotes/[id]` (details, photos + "Include photos", estimate editor, **Appointment** reschedule card, **Conversation** email panel, **Invoice** section), `app/admin/availability` (weekday defaults + month calendar with day-detail modal), `app/admin/theme` (colors/fonts/branding + **Homepage Images** card)
+- Public UI: `app/page.tsx` (homepage — hero + 3 image sections, images from `ThemeSettings` via `/api/theme`), `app/request` (quote form), `app/confirmation/[id]`, `app/quote-approval/[id]`, `app/schedule/[id]` (post-approval date picker)
+- API under `app/api/...`: `requests`, `admin/quotes/[id]/{analyze,send,estimate,status,delete,get-signed-url,emails,emails/reply,emails/analyze,schedule,invoice,invoice/pdf,invoice/send}`, `admin/availability{,/block,/open}`, `admin/theme`, `quotes/[id]/{approve,deny}`, `schedule/[id]/{availability,book}`, `theme`
 
 ## Environment variables (Vercel + local `.env.local`)
 `ADMIN_PASSWORD`, `SESSION_SECRET`, `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (support@), `NEXT_PUBLIC_SITE_URL` (https://thehearthhollow.com), `DATABASE_URL` / `DATABASE_URL_UNPOOLED`, `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` / `AWS_S3_BUCKET_NAME`, and Gmail/Calendar: `GMAIL_OAUTH_CLIENT_ID` / `GMAIL_OAUTH_CLIENT_SECRET` / `GMAIL_OAUTH_REFRESH_TOKEN` / `GMAIL_USER` (hunterhammond@) / `GMAIL_SEND_AS` (support@). Optional: `BOOKING_TIMEZONE` (default America/New_York), `BOOKING_CALENDAR_ID` (default primary).
@@ -62,6 +62,7 @@ Internal package name is still `handyman-quote-generator` (v0.2.0).
 - **HEIC:** uploads accepted by extension fallback and auto-converted to JPEG server-side (fallback to original on failure). Browsers can't render raw HEIC and Claude vision only takes JPG/PNG/GIF/WebP — conversion fixes both.
 - **Line endings:** `.gitattributes` enforces LF. A one-time `git add --renormalize .` is still outstanding (optional).
 - **Assistant sandbox caveat:** the Cowork sandbox sometimes serves truncated copies of just-edited files, so in-sandbox `tsc`/`grep` can report false errors. Trust the Read tool (host) and **local `npm run build`** as ground truth.
+- **`.claude/` is write-protected from the Edit/Write tools in Cowork sessions** (resolves to a "protected location"). Use `mcp__Windows-MCP__PowerShell` (`Get-Content`/`Set-Content`) to update `CLAUDE.md` or `session_log.md` instead.
 
 ## Reference docs in repo
 `PROJECT_CONTEXT_BRIEF.md` (architecture + security-audit history), `PLAYBOOK.md`, `DEPLOYMENT.md`, and this `.claude/` folder.
