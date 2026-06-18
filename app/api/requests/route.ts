@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { uploadToS3 } from "@/lib/s3";
 import { sendConfirmationEmail } from "@/lib/email";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { isHeic, heicToJpeg } from "@/lib/image";
 
 // --- Limits / allowlists ---------------------------------------------------
 const MAX_FILES = 10;
@@ -184,22 +185,31 @@ export async function POST(req: NextRequest) {
     // Upload validated files
     for (const file of files) {
       try {
-        const buffer = await file.arrayBuffer();
-        const mimeType = mimeForFile(file);
-        const s3Url = await uploadToS3(
-          buffer,
-          file.name,
-          mimeType,
-          projectRequest.id
-        );
+        let upload: ArrayBuffer | Buffer = await file.arrayBuffer();
+        let filename = file.name;
+        let mimeType = mimeForFile(file);
+
+        // Convert HEIC/HEIF to JPEG so it previews in the browser and can be
+        // used for AI vision. Falls back to the original on any failure.
+        if (isHeic(mimeType, filename)) {
+          try {
+            upload = await heicToJpeg(Buffer.from(upload));
+            filename = filename.replace(/\.(heic|heif)$/i, '') + '.jpg';
+            mimeType = 'image/jpeg';
+          } catch (convErr) {
+            console.error(`[HEIC] conversion failed for ${file.name}, keeping original:`, convErr);
+          }
+        }
+
+        const s3Url = await uploadToS3(upload, filename, mimeType, projectRequest.id);
 
         await prisma.uploadedAsset.create({
           data: {
             projectId: projectRequest.id,
-            filename: file.name,
+            filename,
             s3Url,
             mimeType,
-            fileSize: file.size,
+            fileSize: upload instanceof Buffer ? upload.byteLength : file.size,
           },
         });
       } catch (fileError) {

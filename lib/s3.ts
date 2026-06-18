@@ -23,7 +23,7 @@ if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
 }
 
 export async function uploadToS3(
-  buffer: ArrayBuffer,
+  buffer: ArrayBuffer | Buffer | Uint8Array,
   filename: string,
   mimeType: string,
   projectId: string
@@ -57,7 +57,7 @@ export async function uploadToS3(
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: key,
-      Body: Buffer.from(buffer),
+      Body: Buffer.from(buffer as any),
       ContentType: mimeType,
     });
 
