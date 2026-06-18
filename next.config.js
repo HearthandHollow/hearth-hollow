@@ -18,12 +18,17 @@ const nextConfig = {
   env: {
     SKIP_ENV_VALIDATION: 'true',
   },
-  // pdfkit reads its standard-font .afm files from disk at runtime. Vercel's
-  // serverless file tracing doesn't pick these up automatically (the require
-  // path is built dynamically), which causes PDF generation to fail in
-  // production with an ENOENT-style error even though it works locally.
-  // Explicitly include the data directory for the routes that use pdfkit.
+  // pdfkit reads its standard-font .afm files from disk at runtime using a
+  // path built from its own __dirname. When webpack bundles pdfkit into a
+  // single serverless chunk (Next's default), that __dirname no longer
+  // points at node_modules/pdfkit, so the lookup 404s in production
+  // ("ENOENT .../.next/server/chunks/data/Helvetica.afm") even though it
+  // works locally. Marking pdfkit (and its dependency fontkit) as external
+  // keeps them as plain node_modules requires so __dirname stays correct,
+  // and outputFileTracingIncludes makes sure the actual .afm files get
+  // copied into the deployed function.
   experimental: {
+    serverComponentsExternalPackages: ['pdfkit', 'fontkit'],
     outputFileTracingIncludes: {
       '/api/admin/quotes/[id]/invoice/pdf': ['./node_modules/pdfkit/js/data/**'],
       '/api/admin/quotes/[id]/invoice/send': ['./node_modules/pdfkit/js/data/**'],
