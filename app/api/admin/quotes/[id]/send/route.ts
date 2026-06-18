@@ -52,18 +52,59 @@ export async function POST(
 
     console.log(`Sending estimate for quote ${params.id} to ${quote.customer?.email}`);
 
-    // Build estimate details HTML
+    const tier = (quote.estimate.selectedTier as 'low' | 'expected' | 'high') || 'expected';
+    const tierAmount =
+      tier === 'low'
+        ? quote.estimate.lowEstimate
+        : tier === 'high'
+        ? quote.estimate.highEstimate
+        : quote.estimate.expectedEstimate;
+
+    const materialList = Array.isArray(quote.estimate.materialList)
+      ? (quote.estimate.materialList as any[])
+      : [];
+
+    const materialTableRows = materialList
+      .map((m: any) => {
+        const qty = Number(m?.quantity) || 0;
+        const price = Number(m?.estimatedPrice) || 0;
+        const lineTotal = qty * price;
+        return `
+          <tr>
+            <td style="padding:4px 8px;border:1px solid #e5e7eb;">${m?.item || ''}</td>
+            <td style="padding:4px 8px;border:1px solid #e5e7eb;text-align:right;">${qty} ${m?.unit || ''}</td>
+            <td style="padding:4px 8px;border:1px solid #e5e7eb;text-align:right;">$${price.toFixed(2)}</td>
+            <td style="padding:4px 8px;border:1px solid #e5e7eb;text-align:right;">$${lineTotal.toFixed(2)}</td>
+          </tr>`;
+      })
+      .join('');
+
+    const materialTableHtml = materialList.length
+      ? `
+        <h3>Estimated Materials</h3>
+        <table style="border-collapse:collapse;width:100%;margin-bottom:1em;">
+          <thead>
+            <tr>
+              <th style="padding:4px 8px;border:1px solid #e5e7eb;text-align:left;">Item</th>
+              <th style="padding:4px 8px;border:1px solid #e5e7eb;text-align:right;">Qty</th>
+              <th style="padding:4px 8px;border:1px solid #e5e7eb;text-align:right;">Est. Price</th>
+              <th style="padding:4px 8px;border:1px solid #e5e7eb;text-align:right;">Line Total</th>
+            </tr>
+          </thead>
+          <tbody>${materialTableRows}</tbody>
+        </table>`
+      : '';
+
+    // Build estimate details HTML — show only the selected tier's price
     const estimateHtml = `
-      <h3>Estimate Range</h3>
-      <ul>
-        <li><strong>Low Estimate:</strong> $${quote.estimate.lowEstimate.toLocaleString()}</li>
-        <li><strong>Expected Cost:</strong> $${quote.estimate.expectedEstimate.toLocaleString()}</li>
-        <li><strong>High Estimate:</strong> $${quote.estimate.highEstimate.toLocaleString()}</li>
-      </ul>
+      <h3>Estimate</h3>
+      <p style="font-size:1.25em;"><strong>$${tierAmount.toLocaleString()}</strong></p>
 
       ${quote.estimate.timeEstimation ? `<h3>Timeline</h3><p>${quote.estimate.timeEstimation}</p>` : ''}
 
-      ${quote.estimate.materialRequirements ? `<h3>Materials</h3><p>${quote.estimate.materialRequirements}</p>` : ''}
+      ${materialTableHtml}
+
+      ${quote.estimate.materialRequirements ? `<h3>Additional Material Notes</h3><p>${quote.estimate.materialRequirements}</p>` : ''}
 
       <h3>Breakdown</h3>
       <pre>${quote.estimate.breakdown}</pre>

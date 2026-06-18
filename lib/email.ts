@@ -132,6 +132,47 @@ export async function sendCustomEmail(
   }
 }
 
+export async function sendInvoiceEmail(
+  customerEmail: string,
+  customerName: string,
+  projectId: string,
+  invoiceNumber: string,
+  totalAmount: number,
+  pdfBuffer: Buffer
+) {
+  try {
+    const result = await resend.emails.send({
+      from: SENDER_EMAIL,
+      to: customerEmail,
+      reply_to: "quotes@thehearthhollow.com",
+      subject: `Your Invoice #${invoiceNumber} - The Hearth & Hollow`,
+      html: `
+        <h2>Your Invoice</h2>
+        <p>Hi ${customerName},</p>
+        <p>Please find attached your invoice for your project (Reference #${projectId}).</p>
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0;"><strong>Invoice #:</strong> ${invoiceNumber}</p>
+          <p style="margin: 8px 0 0;"><strong>Total Due:</strong> $${totalAmount.toLocaleString()}</p>
+        </div>
+        <p>Please reply to this email with any questions about your invoice.</p>
+        <p>Best regards,<br/>The Hearth & Hollow Team</p>
+      `,
+      text: `Your Invoice\n\nHi ${customerName},\n\nPlease find attached your invoice for your project (Reference #${projectId}).\n\nInvoice #: ${invoiceNumber}\nTotal Due: $${totalAmount.toLocaleString()}\n\nPlease reply to this email with any questions about your invoice.\n\nBest regards,\nThe Hearth & Hollow Team`,
+      attachments: [
+        {
+          filename: `invoice-${invoiceNumber}.pdf`,
+          content: pdfBuffer,
+        },
+      ],
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Failed to send invoice email:", error);
+    throw error;
+  }
+}
+
 export async function sendBookingConfirmationEmail(
   customerEmail: string,
   customerName: string,

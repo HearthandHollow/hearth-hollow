@@ -91,6 +91,8 @@ export async function POST(
         breakdown: analysis.breakdown,
         confidence: analysis.confidence,
         rawAnalysis: analysis.fullAnalysis,
+        materialList: analysis.materialList ?? [],
+        selectedTier: 'expected',
       },
       update: {
         lowEstimate: analysis.lowEstimate,
@@ -99,6 +101,7 @@ export async function POST(
         breakdown: analysis.breakdown,
         confidence: analysis.confidence,
         rawAnalysis: analysis.fullAnalysis,
+        materialList: analysis.materialList ?? [],
       },
     });
 

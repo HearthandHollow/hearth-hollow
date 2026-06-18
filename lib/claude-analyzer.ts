@@ -85,13 +85,15 @@ export async function analyzeWithClaude(
       ? `\n\nThe customer attached ${attachedImages} photo(s) of the project, included above. Use them to inform your estimate (assess condition, scope, materials, and complexity from what you can see).`
       : "";
 
-  const prompt = `You are a professional handyman estimator. Analyze this project and provide estimates.
+  const prompt = `You are a professional handyman estimator. Analyze this project and provide estimates, including a best-effort itemized material list with realistic current US retail prices and quantities.
 
 CATEGORY: ${quote.category}
 DESCRIPTION: ${quote.description}${photoNote}
 
 Respond with ONLY valid JSON (no markdown):
-{"low_estimate": 500, "expected_estimate": 750, "high_estimate": 1200, "complexity": 5, "scope_summary": "work needed", "key_risks": []}`;
+{"low_estimate": 500, "expected_estimate": 750, "high_estimate": 1200, "complexity": 5, "scope_summary": "work needed", "key_risks": [], "material_list": [{"item": "2x4x8 pressure-treated lumber", "quantity": 12, "unit": "board", "estimated_price": 6.50}]}
+
+For material_list: estimate every material likely needed for this specific project to the best of your ability given the description (and photos, if provided). "estimated_price" is the price PER UNIT in USD. If you genuinely cannot estimate any materials (e.g. pure labor task), return an empty array.`;
 
   messageContent.push({ type: "text", text: prompt });
 
@@ -99,7 +101,7 @@ Respond with ONLY valid JSON (no markdown):
     console.log(`[CLAUDE] Calling Claude API...`);
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 500,
+      max_tokens: 1500,
       messages: [
         {
           role: "user",
@@ -135,7 +137,27 @@ Respond with ONLY valid JSON (no markdown):
     const expected = parseInt(parsed.expected_estimate) || 750;
     const high = parseInt(parsed.high_estimate) || 1200;
 
-    console.log(`[CLAUDE] Estimates: Low=$${low}, Expected=$${expected}, High=$${high}`);
+    const materialList = Array.isArray(parsed.material_list)
+      ? parsed.material_list
+          .map((m: any) => ({
+            item: String(m?.item || "").trim(),
+            quantity: Number(m?.quantity) || 1,
+            unit: String(m?.unit || "unit").trim(),
+            estimatedPrice: Number(m?.estimated_price) || 0,
+          }))
+          .filter((m: any) => m.item.length > 0)
+      : [];
+
+    console.log(`[CLAUDE] Estimates: Low=$${low}, Expected=$${expected}, High=$${high}, Materials=${materialList.length}`);
+
+    const materialLines = materialList.length
+      ? materialList
+          .map(
+            (m: any) =>
+              `- ${m.item}: ${m.quantity} ${m.unit} @ $${m.estimatedPrice.toFixed(2)} = $${(m.quantity * m.estimatedPrice).toFixed(2)}`
+          )
+          .join("\n")
+      : "None estimated";
 
     return {
       lowEstimate: low,
@@ -143,6 +165,7 @@ Respond with ONLY valid JSON (no markdown):
       highEstimate: high,
       complexity: parsed.complexity || 5,
       scope: parsed.scope_summary || "Project analysis",
+      materialList,
       breakdown: `
 **Project:** ${quote.category}
 **Description:** ${quote.description}
@@ -153,6 +176,9 @@ Respond with ONLY valid JSON (no markdown):
 - Low: $${low}
 - Expected: $${expected}
 - High: $${high}
+
+**Estimated Materials:**
+${materialLines}
 
 **Key Risks:**
 ${(parsed.key_risks || []).map((r: any) => `- ${r}`).join("\n") || "None identified"}

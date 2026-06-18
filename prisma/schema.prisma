@@ -50,6 +50,7 @@ model ProjectRequest {
 
   uploadedAssets UploadedAsset[]
   estimate       Estimate?
+  invoices       Invoice[]
 
   @@map("project_requests")
 }
@@ -132,8 +133,12 @@ model Estimate {
 
   // Additional details
   materialRequirements String? @db.Text
+  materialList        Json?   // [{ item, quantity, unit, estimatedPrice }] structured material list w/ pricing
   timeEstimation      String? // e.g., "3-5 days", "1-2 weeks"
   isEdited           Boolean @default(false) // tracks if admin manually adjusted
+
+  // Which tier (low/expected/high) the admin has selected to actually quote the customer
+  selectedTier String @default("expected") // "low" | "expected" | "high"
 
   // Status
   status      String     @default("pending")
@@ -160,6 +165,29 @@ model EstimateHistory {
   createdAt   DateTime   @default(now())
   
   @@map("estimate_history")
+}
+
+model Invoice {
+  id          String     @id @default(cuid())
+  projectId   String
+  project     ProjectRequest @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  invoiceNumber String   @unique
+
+  // [{ description, quantity, unitPrice, total }]
+  lineItems   Json
+
+  subtotal    Float
+  total       Float
+  notes       String?    @db.Text
+
+  status      String     @default("draft") // draft, sent, paid
+  sentAt      DateTime?
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("invoices")
 }
 
 model AdminUser {

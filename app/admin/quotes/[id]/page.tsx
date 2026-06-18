@@ -37,9 +37,18 @@ interface Quote {
     breakdown: string;
     confidence: number;
     materialRequirements?: string;
+    materialList?: MaterialItem[];
     timeEstimation?: string;
     isEdited?: boolean;
+    selectedTier?: 'low' | 'expected' | 'high';
   };
+}
+
+interface MaterialItem {
+  item: string;
+  quantity: number;
+  unit: string;
+  estimatedPrice: number;
 }
 
 interface AssetWithSignedUrl {
@@ -94,7 +103,9 @@ export default function QuoteDetailPage() {
     breakdown: '',
     materialRequirements: '',
     timeEstimation: '',
+    materialList: [] as MaterialItem[],
   });
+  const [savingTier, setSavingTier] = useState(false);
   const [imageLoadErrors, setImageLoadErrors] = useState<Record<string, boolean>>({});
   const [changingStatus, setChangingStatus] = useState(false);
   const [includePhotos, setIncludePhotos] = useState(false);
@@ -111,12 +122,41 @@ export default function QuoteDetailPage() {
   const [scheduleSlot, setScheduleSlot] = useState<'morning' | 'afternoon'>('morning');
   const [savingSchedule, setSavingSchedule] = useState(false);
 
+  interface InvoiceLineItem {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+  }
+  interface InvoiceData {
+    id: string;
+    invoiceNumber: string;
+    lineItems: { description: string; quantity: number; unitPrice: number; total: number }[];
+    subtotal: number;
+    total: number;
+    status: string;
+    sentAt?: string | null;
+  }
+
+  const [invoice, setInvoice] = useState<InvoiceData | null>(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(true);
+  const [showInvoiceEditor, setShowInvoiceEditor] = useState(false);
+  const [invoiceLineItems, setInvoiceLineItems] = useState<InvoiceLineItem[]>([]);
+  const [invoiceNotes, setInvoiceNotes] = useState('');
+  const [savingInvoice, setSavingInvoice] = useState(false);
+  const [sendingInvoice, setSendingInvoice] = useState(false);
+  const [invoiceError, setInvoiceError] = useState('');
+  const [invoiceSentMsg, setInvoiceSentMsg] = useState('');
+
   useEffect(() => {
     fetchQuote();
   }, [quoteId]);
 
   useEffect(() => {
     fetchEmails();
+  }, [quoteId]);
+
+  useEffect(() => {
+    fetchInvoice();
   }, [quoteId]);
 
   const fetchQuote = async () => {
@@ -145,6 +185,7 @@ export default function QuoteDetailPage() {
           breakdown: data.estimate.breakdown,
           materialRequirements: data.estimate.materialRequirements || '',
           timeEstimation: data.estimate.timeEstimation || '',
+          materialList: Array.isArray(data.estimate.materialList) ? data.estimate.materialList : [],
         });
       }
 
@@ -273,6 +314,54 @@ export default function QuoteDetailPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save estimate');
     }
+  };
+
+  const handleSelectTier = async (tier: 'low' | 'expected' | 'high') => {
+    if (!quote?.estimate || savingTier) return;
+    setSavingTier(true);
+    try {
+      const response = await fetch(`/api/admin/quotes/${quoteId}/estimate`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selectedTier: tier }),
+      });
+      if (!response.ok) throw new Error('Failed to update selected tier');
+      const data = await response.json();
+      setQuote(prev => prev ? { ...prev, estimate: data } : null);
+      setError('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update selected tier');
+    } finally {
+      setSavingTier(false);
+    }
+  };
+
+  const addMaterialRow = () => {
+    setEstimateEditData(prev => ({
+      ...prev,
+      materialList: [...prev.materialList, { item: '', quantity: 1, unit: 'unit', estimatedPrice: 0 }],
+    }));
+  };
+
+  const updateMaterialRow = (index: number, field: keyof MaterialItem, value: string) => {
+    setEstimateEditData(prev => {
+      const next = [...prev.materialList];
+      const row = { ...next[index] };
+      if (field === 'quantity' || field === 'estimatedPrice') {
+        (row[field] as number) = parseFloat(value) || 0;
+      } else {
+        (row[field] as string) = value;
+      }
+      next[index] = row;
+      return { ...prev, materialList: next };
+    });
+  };
+
+  const removeMaterialRow = (index: number) => {
+    setEstimateEditData(prev => ({
+      ...prev,
+      materialList: prev.materialList.filter((_, i) => i !== index),
+    }));
   };
 
   const handleChangeStatus = async (newStatus: string) => {
@@ -404,6 +493,128 @@ export default function QuoteDetailPage() {
       setError(err instanceof Error ? err.message : 'Failed to clear schedule');
     } finally {
       setSavingSchedule(false);
+    }
+  };
+
+  const fetchInvoice = async () => {
+    setInvoiceLoading(true);
+    try {
+      const res = await fetch(`/api/admin/quotes/${quoteId}/invoice`);
+      if (res.status === 401) return;
+      const data = await res.json();
+      if (data.invoice) {
+        setInvoice(data.invoice);
+        setInvoiceLineItems(
+          data.invoice.lineItems.map((li: any) => ({
+            description: li.description,
+            quantity: li.quantity,
+            unitPrice: li.unitPrice,
+          }))
+        );
+      }
+    } catch (err) {
+      // Non-fatal — invoice section will just start empty.
+    } finally {
+      setInvoiceLoading(false);
+    }
+  };
+
+  const buildDefaultLineItems = (): InvoiceLineItem[] => {
+    const materials = quote?.estimate?.materialList || [];
+    const materialLines: InvoiceLineItem[] = materials.map((m) => ({
+      description: m.item,
+      quantity: m.quantity,
+      unitPrice: m.estimatedPrice,
+    }));
+    const materialTotal = materialLines.reduce((sum, li) => sum + li.quantity * li.unitPrice, 0);
+
+    const tier = quote?.estimate?.selectedTier || 'expected';
+    const tierAmount = quote?.estimate
+      ? tier === 'low'
+        ? quote.estimate.lowEstimate
+        : tier === 'high'
+        ? quote.estimate.highEstimate
+        : quote.estimate.expectedEstimate
+      : 0;
+
+    const laborAmount = Math.max(tierAmount - materialTotal, 0);
+    const laborLine: InvoiceLineItem = {
+      description: 'Labor',
+      quantity: 1,
+      unitPrice: laborAmount,
+    };
+
+    return [...materialLines, laborLine];
+  };
+
+  const handleOpenInvoiceEditor = () => {
+    if (invoiceLineItems.length === 0) {
+      setInvoiceLineItems(buildDefaultLineItems());
+    }
+    setShowInvoiceEditor(true);
+    setInvoiceSentMsg('');
+  };
+
+  const addInvoiceRow = () => {
+    setInvoiceLineItems((prev) => [...prev, { description: '', quantity: 1, unitPrice: 0 }]);
+  };
+
+  const updateInvoiceRow = (index: number, field: keyof InvoiceLineItem, value: string) => {
+    setInvoiceLineItems((prev) => {
+      const next = [...prev];
+      const row = { ...next[index] };
+      if (field === 'quantity' || field === 'unitPrice') {
+        (row[field] as number) = parseFloat(value) || 0;
+      } else {
+        (row[field] as string) = value;
+      }
+      next[index] = row;
+      return next;
+    });
+  };
+
+  const removeInvoiceRow = (index: number) => {
+    setInvoiceLineItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const invoiceTotal = invoiceLineItems.reduce((sum, li) => sum + li.quantity * li.unitPrice, 0);
+
+  const handleSaveAndPreviewInvoice = async () => {
+    setSavingInvoice(true);
+    setInvoiceError('');
+    try {
+      const res = await fetch(`/api/admin/quotes/${quoteId}/invoice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lineItems: invoiceLineItems, notes: invoiceNotes }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save invoice');
+      setInvoice(data.invoice);
+      window.open(`/api/admin/quotes/${quoteId}/invoice/pdf`, '_blank');
+    } catch (err) {
+      setInvoiceError(err instanceof Error ? err.message : 'Failed to save invoice');
+    } finally {
+      setSavingInvoice(false);
+    }
+  };
+
+  const handleEmailInvoice = async () => {
+    setSendingInvoice(true);
+    setInvoiceError('');
+    setInvoiceSentMsg('');
+    try {
+      const res = await fetch(`/api/admin/quotes/${quoteId}/invoice/send`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to email invoice');
+      setInvoice(data.invoice);
+      setInvoiceSentMsg('Invoice emailed to customer.');
+    } catch (err) {
+      setInvoiceError(err instanceof Error ? err.message : 'Failed to email invoice');
+    } finally {
+      setSendingInvoice(false);
     }
   };
 
@@ -880,9 +1091,59 @@ export default function QuoteDetailPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Material Requirements</label>
+                  <label className="block text-sm font-semibold mb-2">Material List</label>
+                  <div className="space-y-2">
+                    {estimateEditData.materialList.map((m, i) => (
+                      <div key={i} className="flex flex-wrap sm:flex-nowrap gap-2 items-start border border-themeBorder rounded-lg p-2">
+                        <input
+                          type="text"
+                          placeholder="Item"
+                          value={m.item}
+                          onChange={(e) => updateMaterialRow(i, 'item', e.target.value)}
+                          className="flex-1 min-w-[8rem] px-2 py-1 border border-themeBorder rounded"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Qty"
+                          value={m.quantity}
+                          onChange={(e) => updateMaterialRow(i, 'quantity', e.target.value)}
+                          className="w-20 px-2 py-1 border border-themeBorder rounded"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Unit"
+                          value={m.unit}
+                          onChange={(e) => updateMaterialRow(i, 'unit', e.target.value)}
+                          className="w-24 px-2 py-1 border border-themeBorder rounded"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Price/unit"
+                          value={m.estimatedPrice}
+                          onChange={(e) => updateMaterialRow(i, 'estimatedPrice', e.target.value)}
+                          className="w-28 px-2 py-1 border border-themeBorder rounded"
+                        />
+                        <button
+                          onClick={() => removeMaterialRow(i)}
+                          className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={addMaterialRow}
+                    className="mt-2 px-3 py-1 bg-gray-200 text-themeMuted rounded text-sm hover:bg-gray-300 font-semibold"
+                  >
+                    + Add material
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Material Notes</label>
                   <textarea
-                    placeholder="List of materials needed for this project"
+                    placeholder="Any other freeform material notes"
                     value={estimateEditData.materialRequirements}
                     onChange={(e) => setEstimateEditData({ ...estimateEditData, materialRequirements: e.target.value })}
                     rows={3}
@@ -920,20 +1181,71 @@ export default function QuoteDetailPage() {
 
           {quote.estimate && !isEditingEstimate && (
             <div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="text-sm text-themeMuted">Low Estimate</p>
-                  <p className="text-2xl font-bold text-accent">${quote.estimate.lowEstimate.toLocaleString()}</p>
+              {(() => {
+                const tier = quote.estimate?.selectedTier || 'expected';
+                const tierAmount =
+                  tier === 'low'
+                    ? quote.estimate!.lowEstimate
+                    : tier === 'high'
+                    ? quote.estimate!.highEstimate
+                    : quote.estimate!.expectedEstimate;
+                const tierColor = tier === 'low' ? 'text-accent' : tier === 'high' ? 'text-red-600' : 'text-green-600';
+                const tierBg = tier === 'low' ? 'bg-blue-50' : tier === 'high' ? 'bg-red-50' : 'bg-green-50';
+                return (
+                  <div className={`p-6 rounded-lg mb-4 ${tierBg}`}>
+                    <p className="text-sm text-themeMuted mb-1">
+                      Quoted Price <span className="capitalize">({tier})</span>
+                    </p>
+                    <p className={`text-4xl font-bold ${tierColor}`}>${tierAmount.toLocaleString()}</p>
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      {(['low', 'expected', 'high'] as const).map((t) => (
+                        <button
+                          key={t}
+                          onClick={() => handleSelectTier(t)}
+                          disabled={savingTier}
+                          className={`px-3 py-1 rounded text-sm font-medium capitalize disabled:opacity-50 ${
+                            tier === t
+                              ? 'bg-brand text-white'
+                              : 'bg-white text-themeMuted border border-themeBorder hover:border-brand'
+                          }`}
+                        >
+                          {t === 'low'
+                            ? `Low ($${quote.estimate!.lowEstimate.toLocaleString()})`
+                            : t === 'high'
+                            ? `High ($${quote.estimate!.highEstimate.toLocaleString()})`
+                            : `Expected ($${quote.estimate!.expectedEstimate.toLocaleString()})`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {quote.estimate.materialList && quote.estimate.materialList.length > 0 && (
+                <div className="bg-purple-50 p-4 rounded-lg mb-4 overflow-x-auto">
+                  <p className="text-sm font-semibold text-themeMuted mb-2">Estimated Materials</p>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-themeMuted">
+                        <th className="pr-2 pb-1">Item</th>
+                        <th className="pr-2 pb-1 text-right">Qty</th>
+                        <th className="pr-2 pb-1 text-right">Price/unit</th>
+                        <th className="pb-1 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {quote.estimate.materialList.map((m, i) => (
+                        <tr key={i} className="border-t border-purple-200">
+                          <td className="py-1 pr-2 break-words">{m.item}</td>
+                          <td className="py-1 pr-2 text-right whitespace-nowrap">{m.quantity} {m.unit}</td>
+                          <td className="py-1 pr-2 text-right whitespace-nowrap">${m.estimatedPrice.toFixed(2)}</td>
+                          <td className="py-1 text-right whitespace-nowrap">${(m.quantity * m.estimatedPrice).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <p className="text-sm text-themeMuted">Expected</p>
-                  <p className="text-2xl font-bold text-green-600">${quote.estimate.expectedEstimate.toLocaleString()}</p>
-                </div>
-                <div className="bg-red-50 p-4 rounded-lg">
-                  <p className="text-sm text-themeMuted">High Estimate</p>
-                  <p className="text-2xl font-bold text-red-600">${quote.estimate.highEstimate.toLocaleString()}</p>
-                </div>
-              </div>
+              )}
 
               {quote.estimate.timeEstimation && (
                 <div className="bg-blue-50 p-4 rounded-lg mb-4">
@@ -1099,6 +1411,140 @@ export default function QuoteDetailPage() {
                 {sendingReply ? 'Sending...' : 'Send Reply'}
               </button>
             </div>
+          )}
+        </div>
+
+        {/* Create Invoice */}
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mb-6">
+          <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
+            <h2 className="text-xl font-bold">
+              Invoice {invoice && <span className="text-sm text-themeMuted font-normal">#{invoice.invoiceNumber} ({invoice.status})</span>}
+            </h2>
+            {!showInvoiceEditor && (
+              <button
+                onClick={handleOpenInvoiceEditor}
+                disabled={invoiceLoading}
+                className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent disabled:opacity-50 font-semibold"
+              >
+                {invoice ? 'Edit Invoice' : 'Create Invoice'}
+              </button>
+            )}
+          </div>
+
+          {invoiceError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+              {invoiceError}
+            </div>
+          )}
+
+          {invoiceSentMsg && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-green-700 text-sm">
+              {invoiceSentMsg}
+            </div>
+          )}
+
+          {showInvoiceEditor && (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                {invoiceLineItems.map((li, i) => (
+                  <div key={i} className="flex flex-wrap sm:flex-nowrap gap-2 items-start border border-themeBorder rounded-lg p-2">
+                    <input
+                      type="text"
+                      placeholder="Description"
+                      value={li.description}
+                      onChange={(e) => updateInvoiceRow(i, 'description', e.target.value)}
+                      className="flex-1 min-w-[10rem] px-2 py-1 border border-themeBorder rounded"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Qty"
+                      value={li.quantity}
+                      onChange={(e) => updateInvoiceRow(i, 'quantity', e.target.value)}
+                      className="w-20 px-2 py-1 border border-themeBorder rounded"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Unit Price"
+                      value={li.unitPrice}
+                      onChange={(e) => updateInvoiceRow(i, 'unitPrice', e.target.value)}
+                      className="w-28 px-2 py-1 border border-themeBorder rounded"
+                    />
+                    <p className="w-24 px-2 py-1 text-sm text-themeMuted text-right">
+                      ${(li.quantity * li.unitPrice).toFixed(2)}
+                    </p>
+                    <button
+                      onClick={() => removeInvoiceRow(i)}
+                      className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={addInvoiceRow}
+                className="px-3 py-1 bg-gray-200 text-themeMuted rounded text-sm hover:bg-gray-300 font-semibold"
+              >
+                + Add line item
+              </button>
+
+              <div>
+                <label className="block text-sm font-semibold mb-2">Notes (optional)</label>
+                <textarea
+                  value={invoiceNotes}
+                  onChange={(e) => setInvoiceNotes(e.target.value)}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-themeBorder rounded-lg"
+                />
+              </div>
+
+              <div className="flex justify-end text-lg font-bold">
+                Total: ${invoiceTotal.toFixed(2)}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={handleSaveAndPreviewInvoice}
+                  disabled={savingInvoice || invoiceLineItems.length === 0}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-semibold"
+                >
+                  {savingInvoice ? 'Saving…' : 'Save & Preview PDF'}
+                </button>
+                <button
+                  onClick={() => setShowInvoiceEditor(false)}
+                  className="px-4 py-2 bg-gray-300 text-themeMuted rounded-lg hover:bg-gray-400 font-semibold"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!showInvoiceEditor && invoice && (
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-themeMuted text-sm">
+                Total: <span className="font-semibold">${invoice.total.toLocaleString()}</span>
+                {invoice.sentAt ? ` · Sent ${new Date(invoice.sentAt).toLocaleDateString()}` : ''}
+              </p>
+              <button
+                onClick={() => window.open(`/api/admin/quotes/${quoteId}/invoice/pdf`, '_blank')}
+                className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent font-semibold text-sm"
+              >
+                View PDF
+              </button>
+              <button
+                onClick={handleEmailInvoice}
+                disabled={sendingInvoice}
+                className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brandDark disabled:opacity-50 font-semibold text-sm"
+              >
+                {sendingInvoice ? 'Sending…' : 'Email PDF to Customer'}
+              </button>
+            </div>
+          )}
+
+          {!showInvoiceEditor && !invoice && !invoiceLoading && (
+            <p className="text-themeMuted text-sm">No invoice yet. Click "Create Invoice" to build one from the estimate.</p>
           )}
         </div>
       </div>
