@@ -148,9 +148,9 @@ export default function RequestPage() {
   };
 
   return (
-    <div className="min-h-screen bg-themeBg py-12 px-4">
-      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-3xl font-bold mb-2">Request a Quote</h1>
+    <div className="min-h-screen bg-themeBg py-8 sm:py-12 px-3 sm:px-4">
+      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-4 sm:p-8">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Request a Quote</h1>
         <p className="text-themeMuted mb-8">Tell us about your project</p>
 
         {error && (
@@ -267,12 +267,12 @@ export default function RequestPage() {
                 <p className="text-sm text-themeMuted mb-2">Total size: {formatFileSize(getTotalFileSize())}</p>
                 <div className="space-y-2">
                   {uploadedFiles.map((file, index) => (
-                    <div key={index} className="flex justify-between items-center bg-themeBg p-3 rounded">
-                      <span className="text-sm text-themeMuted">{file.name} ({formatFileSize(file.size)})</span>
+                    <div key={index} className="flex justify-between items-center gap-3 bg-themeBg p-3 rounded">
+                      <span className="text-sm text-themeMuted break-all min-w-0">{file.name} ({formatFileSize(file.size)})</span>
                       <button
                         type="button"
                         onClick={() => removeFile(index)}
-                        className="text-red-600 hover:text-red-700 font-semibold"
+                        className="text-red-600 hover:text-red-700 font-semibold shrink-0"
                       >
                         Remove
                       </button>

@@ -90,9 +90,9 @@ export default function SchedulePage() {
   };
 
   const Shell = ({ children }: { children: React.ReactNode }) => (
-    <div className="min-h-screen bg-themeBg py-12 px-4">
+    <div className="min-h-screen bg-themeBg py-6 sm:py-12 px-3 sm:px-4">
       <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-lg shadow-md p-8">{children}</div>
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-8">{children}</div>
       </div>
     </div>
   );

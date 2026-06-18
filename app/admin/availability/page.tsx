@@ -289,10 +289,10 @@ export default function AvailabilityPage() {
   const modalWeekdayOn = selectedDate ? weekdayOn(dateFromKey(selectedDate)) : false;
 
   return (
-    <div className="min-h-screen bg-themeBg py-12 px-4">
+    <div className="min-h-screen bg-themeBg py-6 sm:py-12 px-3 sm:px-4">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Recurring weekday defaults */}
-        <div className="bg-white rounded-lg shadow-md p-8">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-8">
           <h1 className="text-2xl font-bold mb-1">Scheduling Availability</h1>
           <p className="text-themeMuted mb-6 text-sm">
             Set your normal working days, then use the calendar to close off, open, or inspect any day. One job per available day.
@@ -340,53 +340,57 @@ export default function AvailabilityPage() {
         </div>
 
         {/* Calendar */}
-        <div className="bg-white rounded-lg shadow-md p-6 sm:p-8">
+        <div className="bg-white rounded-lg shadow-md p-3 sm:p-8">
           <div className="flex items-center justify-between mb-4">
             <button onClick={goPrev} disabled={!canGoPrev} className="px-3 py-1 rounded border border-themeBorder text-themeMuted hover:bg-themeBg disabled:opacity-40">‹ Prev</button>
-            <h2 className="text-lg font-bold">{monthLabel}</h2>
+            <h2 className="text-base sm:text-lg font-bold">{monthLabel}</h2>
             <button onClick={goNext} className="px-3 py-1 rounded border border-themeBorder text-themeMuted hover:bg-themeBg">Next ›</button>
           </div>
 
           <p className="text-xs text-themeMuted mb-3">Click any day to view jobs or open/close it. “Close week” blocks a whole row.</p>
 
-          <div className="grid grid-cols-8 gap-1 mb-1">
-            <div className="text-xs" />
-            {DOW_LABELS.map((l) => (
-              <div key={l} className="text-center text-xs font-semibold text-themeMuted">{l}</div>
-            ))}
-          </div>
+          <div className="overflow-x-auto">
+            <div className="min-w-[420px]">
+              <div className="grid grid-cols-8 gap-1 mb-1">
+                <div className="text-xs" />
+                {DOW_LABELS.map((l) => (
+                  <div key={l} className="text-center text-xs font-semibold text-themeMuted">{l}</div>
+                ))}
+              </div>
 
-          <div className="space-y-1">
-            {weeks.map((row, ri) => {
-              const wt = weekToggle(row);
-              return (
-                <div key={ri} className="grid grid-cols-8 gap-1 items-stretch">
-                  <button
-                    onClick={wt?.action}
-                    disabled={!wt}
-                    className={`text-[10px] leading-tight rounded px-1 ${wt ? 'text-themeMuted hover:bg-gray-100 border border-themeBorder' : 'text-transparent'}`}
-                  >
-                    {wt ? wt.label : ''}
-                  </button>
-                  {row.map((c, ci) => {
-                    const status = statusOf(c.date, c.inMonth);
-                    const key = keyOf(c.date);
-                    const dayNum = c.date.getUTCDate();
-                    return (
+              <div className="space-y-1">
+                {weeks.map((row, ri) => {
+                  const wt = weekToggle(row);
+                  return (
+                    <div key={ri} className="grid grid-cols-8 gap-1 items-stretch">
                       <button
-                        key={ci}
-                        onClick={() => status !== 'out' && setSelectedDate(key)}
-                        disabled={status === 'out'}
-                        className={`h-12 rounded border text-sm flex flex-col items-center justify-center ${cellClass(status)}`}
+                        onClick={wt?.action}
+                        disabled={!wt}
+                        className={`text-[10px] leading-tight rounded px-1 ${wt ? 'text-themeMuted hover:bg-gray-100 border border-themeBorder' : 'text-transparent'}`}
                       >
-                        {status !== 'out' && <span>{dayNum}</span>}
-                        {status === 'booked' && <span className="text-[9px] leading-none">{jobsByDate[key]?.length} job</span>}
+                        {wt ? wt.label : ''}
                       </button>
-                    );
-                  })}
-                </div>
-              );
-            })}
+                      {row.map((c, ci) => {
+                        const status = statusOf(c.date, c.inMonth);
+                        const key = keyOf(c.date);
+                        const dayNum = c.date.getUTCDate();
+                        return (
+                          <button
+                            key={ci}
+                            onClick={() => status !== 'out' && setSelectedDate(key)}
+                            disabled={status === 'out'}
+                            className={`h-12 rounded border text-sm flex flex-col items-center justify-center ${cellClass(status)}`}
+                          >
+                            {status !== 'out' && <span>{dayNum}</span>}
+                            {status === 'booked' && <span className="text-[9px] leading-none">{jobsByDate[key]?.length} job</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-3 mt-4 text-xs text-themeMuted">
@@ -405,11 +409,11 @@ export default function AvailabilityPage() {
           onClick={() => setSelectedDate(null)}
         >
           <div
-            className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+            className="bg-white rounded-lg shadow-xl max-w-md w-full p-4 sm:p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-start mb-3">
-              <h3 className="text-lg font-bold">{fmtLong(selectedDate)}</h3>
+            <div className="flex justify-between items-start gap-2 mb-3">
+              <h3 className="text-lg font-bold break-words">{fmtLong(selectedDate)}</h3>
               <button onClick={() => setSelectedDate(null)} className="text-gray-400 hover:text-themeMuted text-xl leading-none">×</button>
             </div>
 

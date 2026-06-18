@@ -121,21 +121,21 @@ export default function ThemePage() {
   return (
     <div className="min-h-screen bg-themeBg">
       {/* Header */}
-      <div className="bg-white border-b border-themeBorder px-6 py-4 flex justify-between items-center">
+      <div className="bg-white border-b border-themeBorder px-4 sm:px-6 py-4 flex flex-col sm:flex-row gap-3 sm:gap-4 sm:justify-between sm:items-center">
         <div>
-          <h1 className="text-3xl font-bold text-themeText">Theme Customizer</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-themeText">Theme Customizer</h1>
           <p className="text-themeMuted">Customize your website's appearance</p>
         </div>
         <Link
           href="/admin/dashboard"
-          className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg"
+          className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg self-start sm:self-auto"
         >
           Back to Dashboard
         </Link>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="max-w-6xl mx-auto p-3 sm:p-6">
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
             {error}
@@ -148,11 +148,11 @@ export default function ThemePage() {
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Color Settings */}
-          <div className="col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6">
             {/* Branding */}
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6">
               <h2 className="text-xl font-bold mb-4">Branding</h2>
               <div className="space-y-4">
                 <div>
@@ -177,9 +177,9 @@ export default function ThemePage() {
             </div>
 
             {/* Color Settings */}
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6">
               <h2 className="text-xl font-bold mb-4">Colors</h2>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold mb-2">Primary Color</label>
                   <div className="flex gap-3">
@@ -323,7 +323,7 @@ export default function ThemePage() {
             </div>
 
             {/* Typography */}
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6">
               <h2 className="text-xl font-bold mb-4">Typography</h2>
               <div className="space-y-4">
                 <div>
@@ -353,8 +353,8 @@ export default function ThemePage() {
           </div>
 
           {/* Preview */}
-          <div className="col-span-1">
-            <div className="bg-white rounded-lg shadow p-6 sticky top-6">
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6 lg:sticky lg:top-6">
               <h2 className="text-xl font-bold mb-4">Preview</h2>
 
               {/* Preview Box */}

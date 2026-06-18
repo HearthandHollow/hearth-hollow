@@ -7,21 +7,21 @@ export default function Home() {
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-themeBorder sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-brand">
+        <div className="max-w-6xl mx-auto px-4 py-3 sm:py-4 flex flex-col sm:flex-row gap-3 sm:gap-4 sm:justify-between sm:items-center">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-brand break-words">
               {process.env.NEXT_PUBLIC_COMPANY_NAME || "The Hearth & Hollow"}
             </h1>
-            <p className="text-sm text-themeMuted">Crafted for Self-Sufficiency • Built to Last</p>
+            <p className="text-xs sm:text-sm text-themeMuted">Crafted for Self-Sufficiency • Built to Last</p>
           </div>
-          <nav className="flex gap-4 items-center">
-            <Link href="/gallery" className="px-4 py-2 text-themeMuted hover:text-themeText">
+          <nav className="flex flex-wrap gap-2 sm:gap-4 items-center">
+            <Link href="/gallery" className="px-3 sm:px-4 py-2 text-sm sm:text-base text-themeMuted hover:text-themeText">
               Our Work
             </Link>
-            <Link href="/request" className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brandDark">
+            <Link href="/request" className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-brand text-white rounded-lg hover:bg-brandDark">
               Request Quote
             </Link>
-            <Link href="/admin" className="px-4 py-2 text-themeMuted hover:text-themeText">
+            <Link href="/admin" className="px-3 sm:px-4 py-2 text-sm sm:text-base text-themeMuted hover:text-themeText">
               Admin
             </Link>
           </nav>
@@ -29,10 +29,10 @@ export default function Home() {
       </header>
 
       {/* Hero */}
-      <main className="flex-1 max-w-6xl mx-auto px-4 py-12 w-full">
-        <div className="text-center py-12">
-          <h2 className="text-4xl font-bold mb-4 text-brandDark">Welcome to The Hearth & Hollow</h2>
-          <p className="text-lg text-themeMuted mb-8">
+      <main className="flex-1 max-w-6xl mx-auto px-4 py-8 sm:py-12 w-full">
+        <div className="text-center py-8 sm:py-12">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-brandDark">Welcome to The Hearth & Hollow</h2>
+          <p className="text-base sm:text-lg text-themeMuted mb-8">
             We help you build a self-sufficient life through skilled craftsmanship. From handyman repairs to custom woodworking and metal fabrication — tell us about your project, upload photos, and we'll send you a professional estimate within 24 hours.
           </p>
           <Link 
@@ -44,7 +44,7 @@ export default function Home() {
         </div>
 
         {/* Services */}
-        <div className="bg-amber-50 border border-brand rounded-lg p-8 mb-12">
+        <div className="bg-amber-50 border border-brand rounded-lg p-5 sm:p-8 mb-12">
           <h3 className="text-2xl font-bold text-brandDark mb-4">Our Services</h3>
           <div className="grid md:grid-cols-3 gap-6">
             <div>
@@ -82,7 +82,7 @@ export default function Home() {
         </div>
 
         {/* About */}
-        <div className="bg-themeBg border border-themeBorder rounded-lg p-8 my-12">
+        <div className="bg-themeBg border border-themeBorder rounded-lg p-5 sm:p-8 my-12">
           <h3 className="text-2xl font-bold text-themeText mb-4">About The Hearth & Hollow</h3>
           <p className="text-themeMuted mb-4">
             We're a team of skilled craftspeople dedicated to helping you build a self-sufficient, thriving homestead. Our mission is to combine ancient craft wisdom with modern expertise to create structures and solutions that last generations.

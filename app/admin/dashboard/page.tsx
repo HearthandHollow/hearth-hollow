@@ -187,33 +187,33 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-themeBg">
       {/* Header */}
-      <div className="bg-white border-b border-themeBorder px-6 py-4 flex justify-between items-center">
+      <div className="bg-white border-b border-themeBorder px-4 sm:px-6 py-4 flex flex-col sm:flex-row gap-3 sm:gap-4 sm:justify-between sm:items-center">
         <div>
-          <h1 className="text-3xl font-bold text-brandDark">Hearth & Hollow</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-brandDark">Hearth & Hollow</h1>
           <p className="text-themeMuted">Admin Dashboard</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link
             href="/admin/availability"
-            className="px-4 py-2 bg-brand hover:bg-brandDark text-white rounded-lg"
+            className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-brand hover:bg-brandDark text-white rounded-lg"
           >
             📅 Availability
           </Link>
           <Link
             href="/admin/gallery"
-            className="px-4 py-2 bg-brand hover:bg-brandDark text-white rounded-lg"
+            className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-brand hover:bg-brandDark text-white rounded-lg"
           >
             🖼️ Gallery
           </Link>
           <Link
             href="/admin/theme"
-            className="px-4 py-2 bg-accent hover:bg-accent text-white rounded-lg"
+            className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-accent hover:bg-accent text-white rounded-lg"
           >
             🎨 Theme
           </Link>
           <button
             onClick={handleLogout}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+            className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-red-600 hover:bg-red-700 text-white rounded-lg"
           >
             Logout
           </button>
@@ -221,7 +221,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="max-w-6xl mx-auto p-3 sm:p-6">
         {/* Search Bar */}
         <div className="mb-6">
           <div className="bg-white rounded-lg shadow p-4">
@@ -241,14 +241,14 @@ export default function AdminDashboard() {
         </div>
 
         {/* Tabs */}
-        <div className={`bg-white rounded-lg shadow mb-6 border-b border-themeBorder ${searchQuery ? 'opacity-60' : ''}`}>
-          <div className="flex">
+        <div className={`bg-white rounded-lg shadow mb-6 border-b border-themeBorder overflow-x-auto ${searchQuery ? 'opacity-60' : ''}`}>
+          <div className="flex min-w-max sm:min-w-0">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 disabled={!!searchQuery}
-                className={`flex-1 px-6 py-4 text-center font-medium border-b-2 transition ${
+                className={`flex-shrink-0 sm:flex-1 whitespace-nowrap px-4 sm:px-6 py-3 sm:py-4 text-center text-sm sm:text-base font-medium border-b-2 transition ${
                   activeTab === tab.id
                     ? 'border-brand text-brandDark bg-amber-50'
                     : 'border-transparent text-themeMuted hover:text-themeText'
@@ -278,11 +278,11 @@ export default function AdminDashboard() {
 
         {selectedQuotes.size > 0 && (
           <div className="bg-blue-50 border border-accent rounded-lg shadow p-4 mb-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center">
               <div className="text-sm font-semibold text-accent">
                 {selectedQuotes.size} quote{selectedQuotes.size !== 1 ? 's' : ''} selected
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <select
                   onChange={(e) => {
                     if (e.target.value) {
@@ -356,16 +356,16 @@ export default function AdminDashboard() {
                   />
                   <Link
                     href={`/admin/quotes/${quote.id}`}
-                    className="block flex-1 bg-white rounded-lg shadow hover:shadow-lg transition p-4"
+                    className="block flex-1 min-w-0 bg-white rounded-lg shadow hover:shadow-lg transition p-4"
                   >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3">
-                          <div>
-                            <h3 className="text-lg font-semibold text-themeText">
+                          <div className="min-w-0">
+                            <h3 className="text-lg font-semibold text-themeText break-words">
                               {quote.customer?.name || 'Unknown Customer'}
                             </h3>
-                            <p className="text-sm text-themeMuted mt-1">
+                            <p className="text-sm text-themeMuted mt-1 break-words">
                               <strong>{quote.category}</strong> • {quote.customer?.email}
                             </p>
                             <p className="text-sm text-themeMuted line-clamp-2 mt-2">
@@ -375,7 +375,7 @@ export default function AdminDashboard() {
                         </div>
                       </div>
 
-                      <div className="ml-6 text-right">
+                      <div className="sm:ml-6 sm:text-right">
                         {quote.estimate && (
                           <div className="mb-3">
                             <p className="text-sm text-themeMuted">Estimated Cost</p>

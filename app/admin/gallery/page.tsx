@@ -73,9 +73,9 @@ export default function AdminGalleryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-themeBg py-12 px-4">
+    <div className="min-h-screen bg-themeBg py-6 sm:py-12 px-3 sm:px-4">
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="bg-white rounded-lg shadow-md p-8">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-8">
           <h1 className="text-2xl font-bold mb-1">Gallery</h1>
           <p className="text-themeMuted mb-6 text-sm">
             Upload photos of past work. These appear on your public gallery page (/gallery), newest first.
@@ -116,14 +116,14 @@ export default function AdminGalleryPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-8">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-8">
           <h2 className="text-xl font-bold mb-4">Current photos ({images.length})</h2>
           {loading ? (
             <p className="text-themeMuted">Loading…</p>
           ) : images.length === 0 ? (
             <p className="text-themeMuted">No photos yet.</p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
               {images.map((img) => (
                 <div key={img.id} className="border border-themeBorder rounded-lg overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}

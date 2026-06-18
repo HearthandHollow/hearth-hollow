@@ -452,7 +452,7 @@ export default function QuoteDetailPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-themeBg py-12 px-4">
+    <div className="min-h-screen bg-themeBg py-6 sm:py-12 px-3 sm:px-4">
       <div className="max-w-4xl mx-auto">
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
@@ -461,10 +461,10 @@ export default function QuoteDetailPage() {
         )}
 
         {/* Quote Header */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Quote #{quote.id.substring(0, 8)}</h1>
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-4">
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2 break-words">Quote #{quote.id.substring(0, 8)}</h1>
               <p className="text-themeMuted">Status: <span className="font-semibold capitalize">{quote.status}</span></p>
               {quote.scheduledDate && (
                 <p className="text-themeMuted mt-1">
@@ -482,7 +482,7 @@ export default function QuoteDetailPage() {
                 </p>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {quote.status !== 'sent' && (
                 <button
                   onClick={() => setIsEditing(!isEditing)}
@@ -553,27 +553,27 @@ export default function QuoteDetailPage() {
         </div>
 
         {/* Customer Info */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-6">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mb-6">
           <h2 className="text-xl font-bold mb-4">Customer Information</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="min-w-0">
               <p className="text-sm text-themeMuted">Name</p>
-              <p className="font-semibold">{quote.customer?.name}</p>
+              <p className="font-semibold break-words">{quote.customer?.name}</p>
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-sm text-themeMuted">Email</p>
-              <p className="font-semibold">{quote.customer?.email}</p>
+              <p className="font-semibold break-words">{quote.customer?.email}</p>
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-sm text-themeMuted">Phone</p>
-              <p className="font-semibold">{quote.customer?.phone}</p>
+              <p className="font-semibold break-words">{quote.customer?.phone}</p>
             </div>
           </div>
         </div>
 
         {/* Appointment / Schedule */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-          <div className="flex justify-between items-center mb-4">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mb-6">
+          <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
             <h2 className="text-xl font-bold">Appointment</h2>
             {!scheduleEditing && (
               <button
@@ -657,7 +657,7 @@ export default function QuoteDetailPage() {
 
         {/* Project Details - Edit Mode */}
         {isEditing && (
-          <div className="bg-white rounded-lg shadow-md p-8 mb-6 border-2 border-accent">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mb-6 border-2 border-accent">
             <h2 className="text-xl font-bold mb-4">Edit Project Details</h2>
             <div className="space-y-4">
               <div>
@@ -715,7 +715,7 @@ export default function QuoteDetailPage() {
 
         {/* Project Details - View Mode */}
         {!isEditing && (
-          <div className="bg-white rounded-lg shadow-md p-8 mb-6">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mb-6">
             <h2 className="text-xl font-bold mb-4">Project Details</h2>
             <div className="space-y-3">
               <div>
@@ -740,24 +740,24 @@ export default function QuoteDetailPage() {
 
         {/* Uploaded Photos */}
         {assetsWithUrls && assetsWithUrls.length > 0 && (
-          <div className="bg-white rounded-lg shadow-md p-8 mb-6">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mb-6">
             <h2 className="text-xl font-bold mb-4">Uploaded Files ({assetsWithUrls.length})</h2>
             <div className="space-y-3">
               {assetsWithUrls.map((asset) => {
                 const hasError = imageLoadErrors[asset.id];
                 const displayUrl = asset.signedUrl || asset.s3Url;
-                
+
                 return (
                   <div key={asset.id} className="border border-themeBorder rounded-lg p-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <p className="font-semibold text-themeText">{asset.filename}</p>
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-themeText break-words">{asset.filename}</p>
                         <p className="text-xs text-themeMuted mt-1">Type: {asset.mimeType}</p>
                         {asset.signedUrlError && (
                           <p className="text-xs text-red-600 mt-1">Error: {asset.signedUrlError}</p>
                         )}
                       </div>
-                      <div className="ml-4 flex gap-2">
+                      <div className="sm:ml-4 flex gap-2 flex-shrink-0">
                         <a
                           href={displayUrl}
                           target="_blank"
@@ -801,10 +801,10 @@ export default function QuoteDetailPage() {
         )}
 
         {/* Estimate Section */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-          <div className="flex justify-between items-center mb-4">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mb-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
             <h2 className="text-xl font-bold">AI Analysis {quote.estimate?.isEdited && <span className="text-sm text-brand">(Edited)</span>}</h2>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {quote.estimate && !isEditingEstimate && (
                 <button
                   onClick={() => setIsEditingEstimate(true)}
@@ -838,7 +838,7 @@ export default function QuoteDetailPage() {
             <div className="mb-6 p-6 bg-amber-50 border-2 border-brand rounded-lg">
               <h3 className="text-lg font-bold mb-4 text-brandDark">Edit Estimate Details</h3>
               <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-semibold mb-2">Low Estimate ($)</label>
                     <input
@@ -920,7 +920,7 @@ export default function QuoteDetailPage() {
 
           {quote.estimate && !isEditingEstimate && (
             <div>
-              <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <p className="text-sm text-themeMuted">Low Estimate</p>
                   <p className="text-2xl font-bold text-accent">${quote.estimate.lowEstimate.toLocaleString()}</p>
@@ -977,10 +977,10 @@ export default function QuoteDetailPage() {
         </div>
 
         {/* Conversation */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-          <div className="flex justify-between items-center mb-4">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mb-6">
+          <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
             <h2 className="text-xl font-bold">Conversation</h2>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={fetchEmails}
                 disabled={emailsLoading}
@@ -1070,9 +1070,9 @@ export default function QuoteDetailPage() {
             <div className="space-y-3 mb-6">
               {emails.map((m) => (
                 <div key={m.id} className="border border-themeBorder rounded-lg p-4">
-                  <div className="flex justify-between items-baseline mb-1">
-                    <p className="text-sm font-semibold text-themeText truncate">{m.from}</p>
-                    <p className="text-xs text-themeMuted ml-2 whitespace-nowrap">{m.date}</p>
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline gap-0.5 mb-1">
+                    <p className="text-sm font-semibold text-themeText break-words min-w-0">{m.from}</p>
+                    <p className="text-xs text-themeMuted sm:ml-2 whitespace-nowrap">{m.date}</p>
                   </div>
                   <p className="text-xs text-themeMuted mb-2">{m.subject}</p>
                   <p className="text-sm text-themeMuted whitespace-pre-wrap">{m.body || m.snippet}</p>
