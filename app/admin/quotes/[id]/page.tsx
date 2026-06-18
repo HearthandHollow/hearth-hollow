@@ -748,10 +748,10 @@ export default function QuoteDetailPage() {
                 const displayUrl = asset.signedUrl || asset.s3Url;
 
                 return (
-                  <div key={asset.id} className="border border-themeBorder rounded-lg p-4">
+                  <div key={asset.id} className="border border-themeBorder rounded-lg p-4 min-w-0 overflow-hidden">
                     <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-themeText break-words">{asset.filename}</p>
+                        <p className="font-semibold text-themeText break-words break-all">{asset.filename}</p>
                         <p className="text-xs text-themeMuted mt-1">Type: {asset.mimeType}</p>
                         {asset.signedUrlError && (
                           <p className="text-xs text-red-600 mt-1">Error: {asset.signedUrlError}</p>
@@ -782,7 +782,7 @@ export default function QuoteDetailPage() {
                         <img
                           src={asset.signedUrl}
                           alt={asset.filename}
-                          className="max-w-xs h-auto rounded border border-themeBorder"
+                          className="max-w-full sm:max-w-xs h-auto rounded border border-themeBorder"
                           onError={() => handleImageError(asset.id)}
                         />
                       </div>
@@ -1069,13 +1069,13 @@ export default function QuoteDetailPage() {
           {emails.length > 0 && (
             <div className="space-y-3 mb-6">
               {emails.map((m) => (
-                <div key={m.id} className="border border-themeBorder rounded-lg p-4">
+                <div key={m.id} className="border border-themeBorder rounded-lg p-4 min-w-0 overflow-hidden">
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline gap-0.5 mb-1">
                     <p className="text-sm font-semibold text-themeText break-words min-w-0">{m.from}</p>
                     <p className="text-xs text-themeMuted sm:ml-2 whitespace-nowrap">{m.date}</p>
                   </div>
-                  <p className="text-xs text-themeMuted mb-2">{m.subject}</p>
-                  <p className="text-sm text-themeMuted whitespace-pre-wrap">{m.body || m.snippet}</p>
+                  <p className="text-xs text-themeMuted mb-2 break-words">{m.subject}</p>
+                  <p className="text-sm text-themeMuted whitespace-pre-wrap break-words">{m.body || m.snippet}</p>
                 </div>
               ))}
             </div>
