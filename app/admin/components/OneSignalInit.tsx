@@ -8,6 +8,19 @@ declare global {
   }
 }
 
+// Polls for OneSignal.User.PushSubscription.id — only present once the
+// subscription has actually round-tripped to OneSignal's backend, unlike
+// `optedIn` which flips locally and immediately.
+async function waitForSubscriptionId(OneSignal: any, timeoutMs: number): Promise<string | null> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const id = OneSignal.User.PushSubscription.id;
+    if (id) return id;
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  return null;
+}
+
 /**
  * Loads the OneSignal Web SDK on admin pages only and shows a small opt-in
  * button so Hunter can subscribe this device/browser to push notifications.
@@ -79,15 +92,30 @@ export default function OneSignalInit() {
     try {
       await OneSignal.Notifications.requestPermission();
       await OneSignal.User.PushSubscription.optIn();
-      // Don't rely solely on the SDK's "change" event — check directly so
-      // the button reliably disappears the moment subscribing succeeds.
-      const optedIn = !!OneSignal.User.PushSubscription.optedIn;
-      setStatus(optedIn ? 'subscribed' : 'unsubscribed');
-      if (!optedIn) {
-        console.warn('[push] permission was not granted; still showing the button');
+
+      // IMPORTANT: `optedIn` flips true as soon as optIn() resolves, but
+      // that's just local "user wants to be subscribed" intent — it does
+      // NOT mean OneSignal's backend has actually finished creating the
+      // player/subscription record yet. That sync happens async over the
+      // network right after, and on mobile (user backgrounding the tab/
+      // locking the phone the instant the button disappears) it can get
+      // cut off, leaving the button gone but OneSignal showing 0 real
+      // subscribers. Wait for a real backend-assigned subscription id
+      // before declaring success, so we never lie about it.
+      const subscriptionId = await waitForSubscriptionId(OneSignal, 8000);
+      if (subscriptionId) {
+        setStatus('subscribed');
+        console.log('[push] subscribed, id:', subscriptionId);
+      } else {
+        console.error(
+          '[push] permission was granted but no OneSignal subscription id appeared within 8s — ' +
+            'the backend sync likely did not complete. Keep this tab open and try again.'
+        );
+        setStatus('unsubscribed');
       }
     } catch (err) {
       console.error('[push] failed to enable notifications:', err);
+      setStatus('unsubscribed');
     } finally {
       setSubscribing(false);
     }
