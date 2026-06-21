@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 declare global {
   interface Window {
     OneSignalDeferred?: any[];
+    __oneSignalInitPromise?: Promise<any>;
   }
 }
 
@@ -23,19 +24,27 @@ async function waitForSubscriptionId(OneSignal: any, timeoutMs: number): Promise
   return null;
 }
 
-// Module-level singleton: OneSignal.init() can only run once per page load —
-// calling it a second time throws. usePushSubscription is mounted twice at
-// once on /admin/settings (the floating OneSignalInit button lives in the
-// shared admin layout, and the Notifications tab mounts its own instance on
-// top of it), so every hook instance must share one underlying init() call
-// instead of racing to call it themselves. Whichever instance's effect runs
-// first kicks off the promise; everyone else just awaits the same one.
-let initPromise: Promise<any> | null = null;
-
+// Singleton guard: OneSignal.init() can only run once per page load — calling
+// it a second time throws "SDK already initialized". usePushSubscription is
+// mounted twice at once on /admin/settings (the floating OneSignalInit button
+// lives in the shared admin layout chunk, and the Notifications tab mounts
+// its own instance from the page chunk), so every hook instance must share
+// one underlying init() call instead of racing to call it themselves.
+//
+// IMPORTANT: this guard lives on `window`, not as a module-level variable.
+// A module-level `let initPromise` only dedupes correctly if every consumer
+// shares the exact same evaluated copy of this module — but webpack can
+// (and here, did) put OneSignalInit's copy in the shared admin layout chunk
+// and NotificationsSettings' copy in the /admin/settings page chunk as two
+// separate module instances, each with its own independent `initPromise`.
+// That looked like a working singleton in isolated testing but still let
+// both chunks call OneSignal.init() in production. `window` is the one thing
+// guaranteed to be shared no matter how the code gets split, so the guard
+// has to live there.
 function getOneSignal(appId: string): Promise<any> {
-  if (initPromise) return initPromise;
+  if (window.__oneSignalInitPromise) return window.__oneSignalInitPromise;
 
-  initPromise = new Promise((resolve, reject) => {
+  window.__oneSignalInitPromise = new Promise((resolve, reject) => {
     if (!document.getElementById('onesignal-sdk-script')) {
       const script = document.createElement('script');
       script.id = 'onesignal-sdk-script';
@@ -53,13 +62,22 @@ function getOneSignal(appId: string): Promise<any> {
           notifyButton: { enable: false },
         });
         resolve(OneSignal);
-      } catch (err) {
-        reject(err);
+      } catch (err: any) {
+        // Belt-and-suspenders: if something outside our control still
+        // manages to call init() twice (e.g. a future second consumer, or
+        // a leftover queued call from before this guard ran), don't treat
+        // "already initialized" as fatal — OneSignal is still usable via
+        // the global it attaches to window in that case.
+        if (typeof err?.message === 'string' && err.message.includes('already initialized') && (window as any).OneSignal) {
+          resolve((window as any).OneSignal);
+        } else {
+          reject(err);
+        }
       }
     });
   });
 
-  return initPromise;
+  return window.__oneSignalInitPromise;
 }
 
 /**
