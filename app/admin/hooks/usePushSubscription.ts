@@ -89,6 +89,12 @@ function getOneSignal(appId: string): Promise<any> {
 export function usePushSubscription() {
   const [status, setStatus] = useState<PushStatus>('loading');
   const [subscribing, setSubscribing] = useState(false);
+  // Raw error message/text from a failed init() or subscribe attempt. The
+  // 'unsupported' status only carries a fixed, generic explanation in the
+  // UI — this exposes the actual underlying error so it can be shown
+  // on-screen too, for diagnosing on devices where there's no easy way to
+  // open the JS console (e.g. a phone without a tethered desktop debugger).
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
   // Holds the live OneSignal object once init() resolves, so the click
   // handler can call its methods directly instead of re-queueing through
   // OneSignalDeferred — going through the deferred queue detaches the call
@@ -100,6 +106,7 @@ export function usePushSubscription() {
   useEffect(() => {
     const appId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
     if (!appId) {
+      setErrorDetail('NEXT_PUBLIC_ONESIGNAL_APP_ID is not set in this build');
       setStatus('unsupported');
       return;
     }
@@ -126,6 +133,9 @@ export function usePushSubscription() {
         // greyed-out button on screen.
         if (cancelled) return;
         console.error('[push] OneSignal.init failed:', err);
+        setErrorDetail(
+          err?.message ? String(err.message) : err ? String(err) : 'Unknown error (no message)'
+        );
         setStatus('unsupported');
       });
 
@@ -174,13 +184,14 @@ export function usePushSubscription() {
         );
         setStatus('unsubscribed');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[push] failed to enable notifications:', err);
+      setErrorDetail(err?.message ? String(err.message) : String(err));
       setStatus('unsubscribed');
     } finally {
       setSubscribing(false);
     }
   };
 
-  return { status, subscribing, handleSubscribe };
+  return { status, subscribing, handleSubscribe, errorDetail };
 }

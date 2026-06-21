@@ -11,7 +11,7 @@ import { usePushSubscription } from '../hooks/usePushSubscription';
  * as the floating button (OneSignalInit), via usePushSubscription.
  */
 export default function NotificationsSettings() {
-  const { status, subscribing, handleSubscribe } = usePushSubscription();
+  const { status, subscribing, handleSubscribe, errorDetail } = usePushSubscription();
 
   return (
     <div className="space-y-4">
@@ -29,12 +29,19 @@ export default function NotificationsSettings() {
         )}
 
         {status === 'unsupported' && (
-          <p className="text-sm text-themeMuted">
-            Push notifications aren't configured for this browser/site right
-            now. (OneSignal failed to initialize — check the browser console
-            for details, or confirm the OneSignal app's Web Push setup is
-            complete in its dashboard.)
-          </p>
+          <div className="space-y-2">
+            <p className="text-sm text-themeMuted">
+              Push notifications aren't configured for this browser/site right
+              now. (OneSignal failed to initialize — check the browser console
+              for details, or confirm the OneSignal app's Web Push setup is
+              complete in its dashboard.)
+            </p>
+            {errorDetail && (
+              <p className="text-xs font-mono text-red-700 bg-red-50 border border-red-200 rounded p-2 break-words">
+                {errorDetail}
+              </p>
+            )}
+          </div>
         )}
 
         {status === 'subscribed' && (
@@ -62,13 +69,20 @@ export default function NotificationsSettings() {
         )}
 
         {status === 'unsubscribed' && (
-          <button
-            onClick={handleSubscribe}
-            disabled={subscribing}
-            className="bg-brand hover:bg-brandDark disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-3 rounded-lg shadow transition w-full sm:w-auto"
-          >
-            {subscribing ? 'Enabling…' : 'Enable push notifications on this device'}
-          </button>
+          <div className="space-y-2">
+            <button
+              onClick={handleSubscribe}
+              disabled={subscribing}
+              className="bg-brand hover:bg-brandDark disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-3 rounded-lg shadow transition w-full sm:w-auto"
+            >
+              {subscribing ? 'Enabling…' : 'Enable push notifications on this device'}
+            </button>
+            {errorDetail && (
+              <p className="text-xs font-mono text-red-700 bg-red-50 border border-red-200 rounded p-2 break-words">
+                {errorDetail}
+              </p>
+            )}
+          </div>
         )}
       </div>
     </div>
