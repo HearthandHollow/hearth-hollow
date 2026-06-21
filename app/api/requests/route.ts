@@ -4,6 +4,7 @@ import { uploadToS3 } from "@/lib/s3";
 import { sendConfirmationEmail } from "@/lib/email";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { isHeic, heicToJpeg } from "@/lib/image";
+import { sendAdminPush } from "@/lib/push";
 
 // --- Limits / allowlists ---------------------------------------------------
 const MAX_FILES = 10;
@@ -226,6 +227,17 @@ export async function POST(req: NextRequest) {
       await sendConfirmationEmail(email, name, projectRequest.id);
     } catch (emailError) {
       console.error("Failed to send confirmation email:", emailError);
+    }
+
+    // Push notification to admin (best-effort)
+    try {
+      await sendAdminPush({
+        title: "New quote request",
+        message: `${name} — ${category}`,
+        url: `/admin/quotes/${projectRequest.id}`,
+      });
+    } catch (pushError) {
+      console.error("Failed to send push notification:", pushError);
     }
 
     return NextResponse.json(

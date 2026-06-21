@@ -45,6 +45,11 @@ model ProjectRequest {
   scheduledSlot String?    // "morning" | "afternoon" preference
   scheduledAt   DateTime?  // when the client made the booking
 
+  // Last inbound Gmail message id seen by the email-reply poller (lib/gmail
+  // findThreadByReference), used to detect new client replies and avoid
+  // re-notifying on the same message.
+  lastSeenInboundMessageId String?
+
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
