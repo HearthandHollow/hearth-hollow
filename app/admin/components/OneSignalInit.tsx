@@ -28,9 +28,9 @@ async function waitForSubscriptionId(OneSignal: any, timeoutMs: number): Promise
  * there's only ever one (Hunter), so no per-user player ID storage needed.
  */
 export default function OneSignalInit() {
-  const [status, setStatus] = useState<'loading' | 'subscribed' | 'unsubscribed' | 'unsupported'>(
-    'loading'
-  );
+  const [status, setStatus] = useState<
+    'loading' | 'subscribed' | 'unsubscribed' | 'unsupported' | 'blocked'
+  >('loading');
   const [subscribing, setSubscribing] = useState(false);
   // Holds the live OneSignal object once init() resolves, so the click
   // handler can call its methods directly instead of re-queueing through
@@ -88,6 +88,17 @@ export default function OneSignalInit() {
     const OneSignal = oneSignalRef.current;
     if (!OneSignal || subscribing) return;
 
+    // If notification permission was ever denied for this origin before
+    // (e.g. during an earlier broken setup), Chrome will never show the
+    // permission dialog again no matter how many times this button is
+    // tapped — requestPermission() just silently resolves without any
+    // prompt or error, and OneSignal can never create a real subscription.
+    // Surface that explicitly instead of spinning forever / failing silently.
+    if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
+      setStatus('blocked');
+      return;
+    }
+
     setSubscribing(true);
     try {
       await OneSignal.Notifications.requestPermission();
@@ -122,6 +133,16 @@ export default function OneSignalInit() {
   };
 
   if (status === 'unsupported' || status === 'subscribed') return null;
+
+  if (status === 'blocked') {
+    return (
+      <div className="fixed bottom-4 right-4 z-50 max-w-xs bg-white border border-themeBorder text-themeMuted text-xs px-4 py-3 rounded-lg shadow-lg">
+        Notifications are blocked for this site in Chrome. Tap the lock/info
+        icon next to the address bar → Permissions → Notifications → Allow,
+        then reload this page and try the button again.
+      </div>
+    );
+  }
 
   const sdkReady = status !== 'loading';
 
