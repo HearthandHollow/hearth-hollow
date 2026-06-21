@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isGmailConfigured, findThreadByReference } from "@/lib/gmail";
-import { sendAdminPush } from "@/lib/push";
 import { createNotification } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
@@ -65,11 +64,6 @@ export async function GET(req: NextRequest) {
       if (isOwnAddress(latest.from)) continue; // last message is ours, nothing new from client
       if (latest.id === quote.lastSeenInboundMessageId) continue; // already notified
 
-      await sendAdminPush({
-        title: "New reply from client",
-        message: `${quote.customer.name}: ${latest.snippet || latest.subject}`,
-        url: `/admin/quotes/${quote.id}`,
-      });
       await createNotification({
         type: "email_reply",
         title: "New reply from client",
