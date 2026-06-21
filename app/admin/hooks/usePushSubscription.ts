@@ -23,6 +23,45 @@ async function waitForSubscriptionId(OneSignal: any, timeoutMs: number): Promise
   return null;
 }
 
+// Module-level singleton: OneSignal.init() can only run once per page load —
+// calling it a second time throws. usePushSubscription is mounted twice at
+// once on /admin/settings (the floating OneSignalInit button lives in the
+// shared admin layout, and the Notifications tab mounts its own instance on
+// top of it), so every hook instance must share one underlying init() call
+// instead of racing to call it themselves. Whichever instance's effect runs
+// first kicks off the promise; everyone else just awaits the same one.
+let initPromise: Promise<any> | null = null;
+
+function getOneSignal(appId: string): Promise<any> {
+  if (initPromise) return initPromise;
+
+  initPromise = new Promise((resolve, reject) => {
+    if (!document.getElementById('onesignal-sdk-script')) {
+      const script = document.createElement('script');
+      script.id = 'onesignal-sdk-script';
+      script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async (OneSignal: any) => {
+      try {
+        await OneSignal.init({
+          appId,
+          serviceWorkerPath: '/OneSignalSDKWorker.js',
+          notifyButton: { enable: false },
+        });
+        resolve(OneSignal);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  });
+
+  return initPromise;
+}
+
 /**
  * Shared OneSignal Web SDK init + subscribe logic, used by both the small
  * floating opt-in button (OneSignalInit) and the full Settings > Notifications
@@ -47,42 +86,34 @@ export function usePushSubscription() {
       return;
     }
 
-    if (!document.getElementById('onesignal-sdk-script')) {
-      const script = document.createElement('script');
-      script.id = 'onesignal-sdk-script';
-      script.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
-      script.defer = true;
-      document.head.appendChild(script);
-    }
+    let cancelled = false;
 
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    window.OneSignalDeferred.push(async (OneSignal: any) => {
-      try {
-        await OneSignal.init({
-          appId,
-          serviceWorkerPath: '/OneSignalSDKWorker.js',
-          notifyButton: { enable: false },
-        });
-      } catch (err) {
+    getOneSignal(appId)
+      .then((OneSignal: any) => {
+        if (cancelled) return;
+        oneSignalRef.current = OneSignal;
+
+        const refreshStatus = () => {
+          const optedIn = !!OneSignal.User.PushSubscription.optedIn;
+          setStatus(optedIn ? 'subscribed' : 'unsubscribed');
+        };
+        refreshStatus();
+        OneSignal.User.PushSubscription.addEventListener('change', refreshStatus);
+      })
+      .catch((err: any) => {
         // If the OneSignal app's Web Push platform isn't fully configured
         // in the dashboard (site URL / icon / permission prompt not saved),
         // init() throws and the button would otherwise stay disabled
         // forever, stuck on "loading". Hide it instead of leaving a dead
         // greyed-out button on screen.
+        if (cancelled) return;
         console.error('[push] OneSignal.init failed:', err);
         setStatus('unsupported');
-        return;
-      }
+      });
 
-      oneSignalRef.current = OneSignal;
-
-      const refreshStatus = () => {
-        const optedIn = !!OneSignal.User.PushSubscription.optedIn;
-        setStatus(optedIn ? 'subscribed' : 'unsubscribed');
-      };
-      refreshStatus();
-      OneSignal.User.PushSubscription.addEventListener('change', refreshStatus);
-    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleSubscribe = async () => {
