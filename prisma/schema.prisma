@@ -207,6 +207,21 @@ model AdminUser {
   @@map("admin_users")
 }
 
+model Notification {
+  id        String   @id @default(cuid())
+
+  type      String   // "new_request" | "email_reply" | "booking"
+  title     String
+  message   String
+  url       String?  // admin-relative path to open on click, e.g. /admin/quotes/[id]
+
+  viewedAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
+
 model ThemeSettings {
   id        String     @id @default(cuid())
 

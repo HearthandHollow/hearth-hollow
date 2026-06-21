@@ -5,6 +5,7 @@ import { sendConfirmationEmail } from "@/lib/email";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { isHeic, heicToJpeg } from "@/lib/image";
 import { sendAdminPush } from "@/lib/push";
+import { createNotification } from "@/lib/notifications";
 
 // --- Limits / allowlists ---------------------------------------------------
 const MAX_FILES = 10;
@@ -239,6 +240,13 @@ export async function POST(req: NextRequest) {
     } catch (pushError) {
       console.error("Failed to send push notification:", pushError);
     }
+
+    await createNotification({
+      type: "new_request",
+      title: "New quote request",
+      message: `${name} — ${category}`,
+      url: `/admin/quotes/${projectRequest.id}`,
+    });
 
     return NextResponse.json(
       { id: projectRequest.id, message: "Request received" },

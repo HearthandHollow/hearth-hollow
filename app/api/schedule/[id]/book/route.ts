@@ -5,6 +5,7 @@ import { isDateBookable, parseDateKey, SLOTS } from '@/lib/availability';
 import { sendBookingConfirmationEmail } from '@/lib/email';
 import { createBookingEvent } from '@/lib/calendar';
 import { sendAdminPush } from '@/lib/push';
+import { createNotification } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -89,6 +90,13 @@ export async function POST(
     } catch (e) {
       console.error('[schedule/book] push failed:', e);
     }
+
+    await createNotification({
+      type: 'booking',
+      title: 'Appointment scheduled',
+      message: `${quote.customer.name} booked ${date} (${slot})`,
+      url: `/admin/quotes/${params.id}`,
+    });
 
     return NextResponse.json({ success: true, date, slot });
   } catch (error) {
