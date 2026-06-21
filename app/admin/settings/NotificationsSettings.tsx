@@ -8,7 +8,7 @@ import { usePushSubscription } from '../hooks/usePushSubscription';
  * Android gesture-nav zones along screen edges, Chrome's address bar
  * collapsing/expanding on scroll and shifting fixed-position elements, or a
  * tiny corner touch target simply being easy to miss. Same underlying logic
- * as the floating button (OneSignalInit), via usePushSubscription.
+ * as the floating button (PushOptIn), via usePushSubscription.
  */
 export default function NotificationsSettings() {
   const { status, subscribing, handleSubscribe, errorDetail } = usePushSubscription();
@@ -31,10 +31,9 @@ export default function NotificationsSettings() {
         {status === 'unsupported' && (
           <div className="space-y-2">
             <p className="text-sm text-themeMuted">
-              Push notifications aren't configured for this browser/site right
-              now. (OneSignal failed to initialize — check the browser console
-              for details, or confirm the OneSignal app's Web Push setup is
-              complete in its dashboard.)
+              Push notifications aren't available in this browser. This needs a
+              browser that supports the Web Push API (recent Chrome, Edge,
+              Firefox, or Safari) over HTTPS.
             </p>
             {errorDetail && (
               <p className="text-xs font-mono text-red-700 bg-red-50 border border-red-200 rounded p-2 break-words">

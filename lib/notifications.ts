@@ -5,7 +5,7 @@
  * This is the single entry point for "something happened, tell the admin."
  * Every call creates the in-app Notification record (reliable, doesn't
  * depend on a browser service worker, FCM delivery, or OS permissions) AND
- * fires the OneSignal push (lib/push.ts) for when the admin isn't looking at
+ * fires the Web Push (lib/push.ts) for when the admin isn't looking at
  * the app at all. Callers should only ever call createNotification — they
  * don't need to call sendAdminPush separately.
  */

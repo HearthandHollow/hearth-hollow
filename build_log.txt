@@ -1,0 +1,107 @@
+
+> handyman-quote-generator@0.2.0 build
+> prisma generate && next build
+
+Prisma schema loaded from prisma\schema.prisma
+
+✔ Generated Prisma Client (v5.22.0) to .\node_modules\@prisma\client in 144ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Help us improve the Prisma ORM for everyone. Share your feedback in a short 2-min survey: https://pris.ly/orm/survey/release-5-22
+
+  ▲ Next.js 14.2.35
+  - Environments: .env.local, .env.production
+
+   Creating an optimized production build ...
+ ⚠ Compiled with warnings
+
+./node_modules/libheif-js/libheif-wasm/libheif-bundle.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+
+Import trace for requested module:
+./node_modules/libheif-js/libheif-wasm/libheif-bundle.js
+./node_modules/libheif-js/wasm-bundle.js
+./node_modules/heic-decode/index.js
+./node_modules/heic-convert/index.js
+./lib/image.ts
+./app/api/requests/route.ts
+
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+[S3] ⚠️ AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY not found
+[S3] ⚠️ AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY not found
+[S3] ⚠️ AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY not found
+[S3] ⚠️ AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY not found
+[S3] ⚠️ AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY not found
+[S3] ⚠️ AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY not found
+[S3] ⚠️ AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY not found
+   Generating static pages (0/18) ...
+   Generating static pages (4/18) 
+   Generating static pages (8/18) 
+   Generating static pages (13/18) 
+[S3] ⚠️ AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY not found
+ ✓ Generating static pages (18/18)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                Size     First Load JS
+┌ ○ /                                      3.71 kB        99.8 kB
+├ ○ /_not-found                            873 B          88.2 kB
+├ ○ /admin                                 1.08 kB        88.4 kB
+├ ○ /admin/availability                    361 B          87.7 kB
+├ ○ /admin/dashboard                       3.13 kB        99.2 kB
+├ ○ /admin/gallery                         360 B          87.7 kB
+├ ƒ /admin/quotes/[id]                     7.67 kB          95 kB
+├ ○ /admin/settings                        9.23 kB         105 kB
+├ ○ /admin/theme                           361 B          87.7 kB
+├ ƒ /api/admin/assets/[id]/signed-url      0 B                0 B
+├ ƒ /api/admin/availability                0 B                0 B
+├ ƒ /api/admin/availability/block          0 B                0 B
+├ ƒ /api/admin/availability/open           0 B                0 B
+├ ƒ /api/admin/bulk-actions/delete         0 B                0 B
+├ ƒ /api/admin/bulk-actions/move           0 B                0 B
+├ ƒ /api/admin/gallery                     0 B                0 B
+├ ƒ /api/admin/gallery/[id]                0 B                0 B
+├ ƒ /api/admin/login                       0 B                0 B
+├ ƒ /api/admin/logout                      0 B                0 B
+├ ƒ /api/admin/notifications               0 B                0 B
+├ ƒ /api/admin/quotes                      0 B                0 B
+├ ƒ /api/admin/quotes/[id]                 0 B                0 B
+├ ƒ /api/admin/quotes/[id]/analyze         0 B                0 B
+├ ƒ /api/admin/quotes/[id]/delete          0 B                0 B
+├ ƒ /api/admin/quotes/[id]/emails          0 B                0 B
+├ ƒ /api/admin/quotes/[id]/emails/analyze  0 B                0 B
+├ ƒ /api/admin/quotes/[id]/emails/reply    0 B                0 B
+├ ƒ /api/admin/quotes/[id]/estimate        0 B                0 B
+├ ƒ /api/admin/quotes/[id]/get-signed-url  0 B                0 B
+├ ƒ /api/admin/quotes/[id]/invoice         0 B                0 B
+├ ƒ /api/admin/quotes/[id]/invoice/pdf     0 B                0 B
+├ ƒ /api/admin/quotes/[id]/invoice/send    0 B                0 B
+├ ƒ /api/admin/quotes/[id]/schedule        0 B                0 B
+├ ƒ /api/admin/quotes/[id]/send            0 B                0 B
+├ ƒ /api/admin/quotes/[id]/status          0 B                0 B
+├ ƒ /api/admin/theme                       0 B                0 B
+├ ƒ /api/cron/check-email-replies          0 B                0 B
+├ ƒ /api/gallery                           0 B                0 B
+├ ƒ /api/quotes/[id]/approve               0 B                0 B
+├ ƒ /api/quotes/[id]/deny                  0 B                0 B
+├ ƒ /api/requests                          0 B                0 B
+├ ƒ /api/schedule/[id]/availability        0 B                0 B
+├ ƒ /api/schedule/[id]/book                0 B                0 B
+├ ƒ /api/theme                             0 B                0 B
+├ ƒ /confirmation/[id]                     905 B            97 kB
+├ ○ /gallery                               1.33 kB        88.7 kB
+├ ƒ /quote-approval/[id]                   1.04 kB        97.1 kB
+├ ○ /request                               2.52 kB        89.8 kB
+└ ƒ /schedule/[id]                         1.92 kB        89.2 kB
++ First Load JS shared by all              87.3 kB
+  ├ chunks/117-9776bcfde68b9ed6.js         31.7 kB
+  ├ chunks/fd9d1056-88c8a1669018f964.js    53.6 kB
+  └ other shared chunks (total)            1.95 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

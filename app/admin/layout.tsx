@@ -1,11 +1,11 @@
-import OneSignalInit from './components/OneSignalInit';
+import PushOptIn from './components/PushOptIn';
 import NotificationBell from './components/NotificationBell';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <NotificationBell />
-      <OneSignalInit />
+      <PushOptIn />
       {children}
     </>
   );

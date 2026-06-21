@@ -222,6 +222,26 @@ model Notification {
   @@map("notifications")
 }
 
+// A browser Web Push subscription (the admin's device). Stores the raw
+// PushSubscription fields the Web Push protocol needs to deliver an encrypted
+// payload: the endpoint plus the p256dh public key and auth secret. Replaces
+// the previous OneSignal integration, which silently dropped these keys.
+model PushSubscription {
+  id        String   @id @default(cuid())
+
+  endpoint  String   @unique
+  p256dh    String   // subscription public key (base64url)
+  auth      String   // subscription auth secret (base64url)
+
+  // Optional context for debugging which device this is.
+  userAgent String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("push_subscriptions")
+}
+
 model ThemeSettings {
   id        String     @id @default(cuid())
 
