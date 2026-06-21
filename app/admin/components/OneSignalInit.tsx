@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 declare global {
   interface Window {
@@ -18,6 +18,13 @@ export default function OneSignalInit() {
   const [status, setStatus] = useState<'loading' | 'subscribed' | 'unsubscribed' | 'unsupported'>(
     'loading'
   );
+  const [subscribing, setSubscribing] = useState(false);
+  // Holds the live OneSignal object once init() resolves, so the click
+  // handler can call its methods directly instead of re-queueing through
+  // OneSignalDeferred — going through the deferred queue detaches the call
+  // from the click's user gesture, which makes browsers silently ignore the
+  // permission prompt (this was the root cause of the button doing nothing).
+  const oneSignalRef = useRef<any>(null);
 
   useEffect(() => {
     const appId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
@@ -42,39 +49,50 @@ export default function OneSignalInit() {
         notifyButton: { enable: false },
       });
 
-      const refreshStatus = async () => {
-        try {
-          const optedIn = await OneSignal.User.PushSubscription.optedIn;
-          setStatus(optedIn ? 'subscribed' : 'unsubscribed');
-        } catch {
-          setStatus('unsubscribed');
-        }
+      oneSignalRef.current = OneSignal;
+
+      const refreshStatus = () => {
+        const optedIn = !!OneSignal.User.PushSubscription.optedIn;
+        setStatus(optedIn ? 'subscribed' : 'unsubscribed');
       };
-      await refreshStatus();
+      refreshStatus();
       OneSignal.User.PushSubscription.addEventListener('change', refreshStatus);
     });
   }, []);
 
-  const handleSubscribe = () => {
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    window.OneSignalDeferred.push(async (OneSignal: any) => {
+  const handleSubscribe = async () => {
+    const OneSignal = oneSignalRef.current;
+    if (!OneSignal || subscribing) return;
+
+    setSubscribing(true);
+    try {
+      await OneSignal.Notifications.requestPermission();
       await OneSignal.User.PushSubscription.optIn();
-      try {
-        await OneSignal.Notifications.requestPermission();
-      } catch {
-        // permission prompt may already be resolved; ignore
+      // Don't rely solely on the SDK's "change" event — check directly so
+      // the button reliably disappears the moment subscribing succeeds.
+      const optedIn = !!OneSignal.User.PushSubscription.optedIn;
+      setStatus(optedIn ? 'subscribed' : 'unsubscribed');
+      if (!optedIn) {
+        console.warn('[push] permission was not granted; still showing the button');
       }
-    });
+    } catch (err) {
+      console.error('[push] failed to enable notifications:', err);
+    } finally {
+      setSubscribing(false);
+    }
   };
 
   if (status === 'unsupported' || status === 'subscribed') return null;
 
+  const sdkReady = status !== 'loading';
+
   return (
     <button
       onClick={handleSubscribe}
-      className="fixed bottom-4 right-4 z-50 bg-brand hover:bg-brandDark text-white text-sm font-semibold px-4 py-2 rounded-full shadow-lg transition"
+      disabled={!sdkReady || subscribing}
+      className="fixed bottom-4 right-4 z-50 bg-brand hover:bg-brandDark disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-2 rounded-full shadow-lg transition"
     >
-      Enable push notifications
+      {subscribing ? 'Enabling…' : 'Enable push notifications'}
     </button>
   );
 }
