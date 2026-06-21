@@ -15,7 +15,7 @@ Internal package name is still `handyman-quote-generator` (v0.2.0).
 - **PostgreSQL (Neon)** via **Prisma 5**
 - **AWS S3** for file storage (presigned URLs)
 - **Anthropic SDK** — model `claude-haiku-4-5-20251001` (estimates, photo vision, email-thread analysis)
-- **Resend** for outbound email; **Gmail API** (OAuth refresh token) for reading/replying to threads; **Google Calendar API** for booking events
+- **Resend** for outbound email; **Gmail API** (OAuth refresh token) for reading/replying to threads; **Google Calendar API** for booking events; **OneSignal** for admin web push
 - Hosted on **Vercel**, DNS on Vercel nameservers
 
 ## Key files
@@ -27,13 +27,15 @@ Internal package name is still `handyman-quote-generator` (v0.2.0).
 - `lib/claude-analyzer.ts` — estimate analysis, optional photo vision (`includePhotos`)
 - `lib/availability.ts` — bookable-date logic + date helpers (noon-UTC convention)
 - `lib/image.ts` — HEIC→JPEG conversion (`heic-convert`, pure JS)
-- `prisma/schema.prisma` — models: Customer, ProjectRequest (has `scheduledDate/scheduledSlot/scheduledAt`), UploadedAsset, Estimate, EstimateHistory, Invoice, AdminUser (unused), ThemeSettings (incl. `heroImageUrl`/`craftImageUrl`/`gatheringImageUrl`/`homesteadImageUrl` homepage image fields), AvailabilitySettings, BlockedDate, OpenDate
-- Admin UI: `app/admin/dashboard`, `app/admin/quotes/[id]` (details, photos + "Include photos", estimate editor, **Appointment** reschedule card, **Conversation** email panel, **Invoice** section), `app/admin/availability` (weekday defaults + month calendar with day-detail modal), `app/admin/theme` (colors/fonts/branding + **Homepage Images** card)
+- `lib/push.ts` — OneSignal admin push sender (`sendAdminPush`); looks up push-capable player ids directly via the Players API rather than the dashboard Subscribed Users segment (segment lagged/mismatched in practice)
+- `lib/notifications.ts` — `createNotification()`: single entry point for admin notifications. Writes a `Notification` row (in-app bell feed) AND calls `sendAdminPush` (best-effort, never throws). All trigger sites should call this, not `lib/push.ts` directly.
+- `prisma/schema.prisma` — models: Customer, ProjectRequest (has `scheduledDate/scheduledSlot/scheduledAt`), UploadedAsset, Estimate, EstimateHistory, Invoice, AdminUser (unused), ThemeSettings (incl. `heroImageUrl`/`craftImageUrl`/`gatheringImageUrl`/`homesteadImageUrl` homepage image fields), AvailabilitySettings, BlockedDate, OpenDate, Notification (type/title/message/url/viewedAt -- backs the admin bell)
+- Admin UI: `app/admin/dashboard`, `app/admin/quotes/[id]` (details, photos + "Include photos", estimate editor, **Appointment** reschedule card, **Conversation** email panel, **Invoice** section), `app/admin/availability` (weekday defaults + month calendar with day-detail modal), `app/admin/theme` (colors/fonts/branding + **Homepage Images** card). `app/admin/layout.tsx` globally mounts `NotificationBell` (bell + unread badge + dropdown, polls `/api/admin/notifications` every 30s) and `OneSignalInit` (push opt-in button) on every `/admin/*` page.
 - Public UI: `app/page.tsx` (homepage — hero + 3 image sections, images from `ThemeSettings` via `/api/theme`), `app/request` (quote form), `app/confirmation/[id]`, `app/quote-approval/[id]`, `app/schedule/[id]` (post-approval date picker)
-- API under `app/api/...`: `requests`, `admin/quotes/[id]/{analyze,send,estimate,status,delete,get-signed-url,emails,emails/reply,emails/analyze,schedule,invoice,invoice/pdf,invoice/send}`, `admin/availability{,/block,/open}`, `admin/theme`, `quotes/[id]/{approve,deny}`, `schedule/[id]/{availability,book}`, `theme`
+- API under `app/api/...`: `requests`, `admin/quotes/[id]/{analyze,send,estimate,status,delete,get-signed-url,emails,emails/reply,emails/analyze,schedule,invoice,invoice/pdf,invoice/send}`, `admin/availability{,/block,/open}`, `admin/theme`, `admin/notifications` (GET recent + unread count, POST mark-read by id or all), `quotes/[id]/{approve,deny}`, `schedule/[id]/{availability,book}`, `theme`
 
 ## Environment variables (Vercel + local `.env.local`)
-`ADMIN_PASSWORD`, `SESSION_SECRET`, `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (support@), `NEXT_PUBLIC_SITE_URL` (https://thehearthhollow.com), `DATABASE_URL` / `DATABASE_URL_UNPOOLED`, `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` / `AWS_S3_BUCKET_NAME`, and Gmail/Calendar: `GMAIL_OAUTH_CLIENT_ID` / `GMAIL_OAUTH_CLIENT_SECRET` / `GMAIL_OAUTH_REFRESH_TOKEN` / `GMAIL_USER` (hunterhammond@) / `GMAIL_SEND_AS` (support@). Optional: `BOOKING_TIMEZONE` (default America/New_York), `BOOKING_CALENDAR_ID` (default primary).
+`ADMIN_PASSWORD`, `SESSION_SECRET`, `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (support@), `NEXT_PUBLIC_SITE_URL` (https://thehearthhollow.com), `DATABASE_URL` / `DATABASE_URL_UNPOOLED`, `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` / `AWS_S3_BUCKET_NAME`, and Gmail/Calendar: `GMAIL_OAUTH_CLIENT_ID` / `GMAIL_OAUTH_CLIENT_SECRET` / `GMAIL_OAUTH_REFRESH_TOKEN` / `GMAIL_USER` (hunterhammond@) / `GMAIL_SEND_AS` (support@). Optional: `BOOKING_TIMEZONE` (default America/New_York), `BOOKING_CALENDAR_ID` (default primary). Push: `ONESIGNAL_APP_ID`, `ONESIGNAL_REST_API_KEY` (no-ops quietly if unset).
 - **Local note:** `AWS_*` and `DATABASE_URL` are blank in `.env.local`, so `npm run dev` has no DB/S3 — **the deployed site is the real test environment.**
 - `.env.local` is gitignored. Never commit or paste secrets.
 

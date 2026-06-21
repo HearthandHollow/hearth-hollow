@@ -16,8 +16,9 @@ Production is live and healthy on Vercel (`main` auto-deploys; only successful b
 - **Invoicing:** pdfkit-generated invoice PDFs from the estimate (material list + labor). "Create Invoice" on the quote page auto-saves and shows the inline preview in one click; "Email PDF to Customer" is available immediately alongside the preview (no forced save/close step first).
 - **Homepage imagery:** full-bleed hero + 3 accent sections (craft, gathering, homestead); images editable from `/admin/theme` -> Homepage Images card (`ThemeSettings.heroImageUrl` etc.), Unsplash stock-photo defaults.
 - **Security hardening complete:** signed-cookie admin auth, signed action tokens, debug endpoints removed, input validation/rate limiting, strong `ADMIN_PASSWORD` + `SESSION_SECRET`.
+- **Admin notifications:** OneSignal web push for the admin (new request / client reply / booking), fixed twice (dead CDN service-worker URL; switched from the dashboard Subscribed Users segment to direct Players-API lookup). Added a parallel **in-app notification bell** (NotificationBell in pp/admin/layout.tsx) backed by a Notification table — lib/notifications.ts createNotification() is now the single call site that both writes the bell feed and fires the push, so future trigger points only need one call.
 
-Last commits: `a141baa` (simplify invoice create/preview/email flow), `58e5cf8` (homepage imagery), `0fca8fa` (pdfkit/fontkit external for Vercel).
+Last commits: `7873590` (centralize push into createNotification), `ad100b3` (in-app notification bell), `44e47e2` (fix push targeting via Players API), `4ce57a6` (fix dead OneSignal worker URL).
 
 ## Open items / future ideas
 - Optional: one-time `git add --renormalize .` to clear CRLF "modified" noise in `git status`.
@@ -69,6 +70,23 @@ Last commits: `a141baa` (simplify invoice create/preview/email flow), `58e5cf8` 
 - Follow-ups / notes:
   - **Sandbox file staleness:** the Cowork Linux bash sandbox served a truncated copy of `prisma/schema.prisma` right after editing it, causing a false Prisma validation error. Fix: run file-dependent commands (`prisma db push`, `npm run build`, `git`) via `mcp__Windows-MCP__PowerShell` (operates on the real host file), not the bash sandbox, when working right after an edit.
   - **`.claude/` is write-protected from this session's Edit/Write tools** (resolves to a "protected location" per the tool). Worked around by editing via PowerShell `Set-Content` directly. If this recurs, that's expected — use PowerShell for `.claude/CLAUDE.md` / `.claude/session_log.md` edits.
+### 2026-06-21 — OneSignal push debugging + in-app notification bell
+- What was requested: verify/fix OneSignal push (Hunter on a Samsung Galaxy S26+ wasn't getting the subscribe prompt, then a subscribed device got no push for test quotes); after diagnosing real bugs, Hunter asked to pivot to a different design -- an in-app notification bell on the admin pages -- and then asked that every in-app notification also push to the device.
+- What changed (files / commits):
+  - `public/OneSignalSDKWorker.js`: fixed dead `importScripts` URL (`cdn.onesignal.com/sdks/web/v16/...` now 404s) -> `https://onesignal.com/sdks/OneSignalSDKWorker.js`. Commit `4ce57a6`.
+  - `lib/push.ts`: rewrote `sendAdminPush` to look up push-capable player ids directly via the OneSignal Players API (`getPushCapablePlayerIds`) and target them with `include_player_ids`, instead of the dashboard's dynamic `Subscribed Users` segment (which lagged behind a fresh subscription and also matched a stray non-push "email" channel player). Switched auth header from `Basic` to `Key`. Commit `44e47e2`.
+  - Diagnosed (not yet independently re-confirmed by Hunter) a remaining real-device delivery gap via OneSignal's notification delivery-stats endpoint: `successful: 1` but `received: 0`, consistent with a stale/cached service worker on the device registered before the worker-URL fix. Gave Hunter a manual fix (Chrome site-info -> "Clear & reset" for thehearthhollow.com, reload, re-subscribe) -- this thread paused when Hunter asked to pivot to the in-app approach.
+  - New `Notification` model in `prisma/schema.prisma` (type/title/message/url/viewedAt) backing an in-app feed, independent of browser push.
+  - New `lib/notifications.ts`: `createNotification()` -- single entry point for admin notifications. Writes the `Notification` row AND calls `sendAdminPush` (both best-effort, never throw). Originally the 3 trigger routes called `sendAdminPush` and `createNotification` separately; later centralized so callers only need `createNotification`.
+  - New `app/api/admin/notifications/route.ts`: `GET` (recent list + unread count, `verifySessionToken`-gated) and `POST` (mark one or all as viewed).
+  - New `app/admin/components/NotificationBell.tsx`: bell icon + unread badge, dropdown with recent notifications (relative time, click-to-navigate-and-mark-read, "mark all read"), polls every 30s, self-hides on a 401 from the API instead of needing auth-state plumbing.
+  - Mounted `NotificationBell` in `app/admin/layout.tsx` alongside the existing `OneSignalInit`.
+  - Wired `createNotification` into the 3 existing push trigger points: `app/api/requests/route.ts` (new quote request), `app/api/cron/check-email-replies/route.ts` (client email reply), `app/api/schedule/[id]/book/route.ts` (booking) -- each previously called `sendAdminPush` directly; now call `createNotification` only. Commits `ad100b3`, `7873590`.
+- Migrations run: `prisma db push` for the new `Notification` model.
+- Deployed? Yes -- `4ce57a6`, `44e47e2`, `ad100b3`, `7873590` all pushed to `main`, `npm run build` green before each push, confirmed `READY` on Vercel via `list_deployments`.
+- Follow-ups / notes:
+  - Real-device push delivery to Hunter's phone after the worker-URL and targeting fixes was never independently re-confirmed -- the conversation moved to the in-app bell before retesting. If push still doesn't arrive on that device, the next step is the device-side "Clear & reset" site data, since the server-side send was verified working via direct REST test.
+  - The Edit tool requires a `Read` call on the target file within the same tracked context before it will allow an edit, even if the file's content was already seen via `Grep` or an earlier `Read` in a prior turn/segment -- ran into this once on `app/api/requests/route.ts`.
 ## How to log a new session (template)
 ```
 ### <date> — <short title>
