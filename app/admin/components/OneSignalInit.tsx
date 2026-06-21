@@ -43,11 +43,22 @@ export default function OneSignalInit() {
 
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(async (OneSignal: any) => {
-      await OneSignal.init({
-        appId,
-        serviceWorkerPath: '/OneSignalSDKWorker.js',
-        notifyButton: { enable: false },
-      });
+      try {
+        await OneSignal.init({
+          appId,
+          serviceWorkerPath: '/OneSignalSDKWorker.js',
+          notifyButton: { enable: false },
+        });
+      } catch (err) {
+        // If the OneSignal app's Web Push platform isn't fully configured
+        // in the dashboard (site URL / icon / permission prompt not saved),
+        // init() throws and the button would otherwise stay disabled
+        // forever, stuck on "loading". Hide it instead of leaving a dead
+        // greyed-out button on screen.
+        console.error('[push] OneSignal.init failed:', err);
+        setStatus('unsupported');
+        return;
+      }
 
       oneSignalRef.current = OneSignal;
 
