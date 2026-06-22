@@ -82,10 +82,6 @@ export default function AdminLogin() {
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
-
-        <p className="text-xs text-themeMuted mt-4 text-center">
-          Password: Use the ADMIN_PASSWORD env var
-        </p>
       </div>
     </div>
   );
