@@ -1,4 +1,4 @@
-﻿# Session Log — The Hearth and Hollow
+# Session Log — The Hearth and Hollow
 
 Running log of work across Claude Cowork sessions. Newest first. Append a dated entry at the end of each session; keep "Current state" and "Open items" up to date.
 
@@ -16,7 +16,7 @@ Production is live and healthy on Vercel (`main` auto-deploys; only successful b
 - **Invoicing:** pdfkit-generated invoice PDFs from the estimate (material list + labor). "Create Invoice" on the quote page auto-saves and shows the inline preview in one click; "Email PDF to Customer" is available immediately alongside the preview (no forced save/close step first).
 - **Homepage imagery:** full-bleed hero + 3 accent sections (craft, gathering, homestead); images editable from `/admin/theme` -> Homepage Images card (`ThemeSettings.heroImageUrl` etc.), Unsplash stock-photo defaults.
 - **Security hardening complete:** signed-cookie admin auth, signed action tokens, debug endpoints removed, input validation/rate limiting, strong `ADMIN_PASSWORD` + `SESSION_SECRET`.
-- **Admin notifications:** OneSignal web push for the admin (new request / client reply / booking), fixed twice (dead CDN service-worker URL; switched from the dashboard Subscribed Users segment to direct Players-API lookup). Added a parallel **in-app notification bell** (NotificationBell in pp/admin/layout.tsx) backed by a Notification table — lib/notifications.ts createNotification() is now the single call site that both writes the bell feed and fires the push, so future trigger points only need one call.
+- **Admin notifications:** OneSignal web push for the admin (new request / client reply / booking), fixed twice (dead CDN service-worker URL; switched from the dashboard Subscribed Users segment to direct Players-API lookup). Added a parallel **in-app notification bell** (NotificationBell in app/admin/layout.tsx) backed by a Notification table — lib/notifications.ts createNotification() is now the single call site that both writes the bell feed and fires the push, so future trigger points only need one call.
 
 Last commits: `7873590` (centralize push into createNotification), `ad100b3` (in-app notification bell), `44e47e2` (fix push targeting via Players API), `4ce57a6` (fix dead OneSignal worker URL).
 
@@ -96,3 +96,24 @@ Last commits: `7873590` (centralize push into createNotification), `ad100b3` (in
 - Deployed? (commit sha / Vercel state):
 - Follow-ups / notes:
 ```
+
+### 2026-06-21 (cont.) - Root-caused dead push; replaced OneSignal with native Web Push
+- Diagnosis: OneSignal sends always returned successful/errored:0 but NOTHING displayed on any device, ever (converted:0 across all history). Live debugging in Chrome on a fully-subscribed desktop proved: local SW showNotification() displays fine, but OneSignal pushes never render. OneSignal's player record had the FCM endpoint but web_auth=False / web_p256=False -- it stored subscriptions WITHOUT the p256dh/auth encryption keys, so every payload was undeliverable and Chrome silently dropped it. The browser's own PushSubscription had valid p256dh+auth. So OneSignal (the third party) was the broken link on every platform -- never a phone/Samsung issue.
+- Fix (commits 342a0be, da16687): ripped out OneSignal entirely; self-hosted Web Push.
+  - Added web-push dep + generated VAPID keys. Env (Vercel prod + .env.local): VAPID_PUBLIC_KEY, NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (mailto:support@).
+  - New Prisma model PushSubscription (endpoint unique, p256dh, auth, userAgent) -> table push_subscriptions; prisma db push run.
+  - lib/push.ts rewritten: sendAdminPush() now web-push.sendNotification() to all stored subs, prunes 404/410. Same signature, so lib/notifications.ts unchanged.
+  - New public/push-sw.js (own SW: push -> showNotification, notificationclick -> focus/open url). Deleted public/OneSignalSDKWorker.js.
+  - New app/api/admin/push/{subscribe,unsubscribe}/route.ts (verifySessionToken-gated, upsert by endpoint).
+  - Client: rewrote app/admin/hooks/usePushSubscription.ts to register /push-sw.js + PushManager.subscribe(VAPID) + POST to save; unregisters legacy OneSignal workers. Renamed OneSignalInit.tsx -> components/PushOptIn.tsx; layout.tsx + NotificationsSettings updated.
+  - Verified END-TO-END on desktop: subscribe -> SAVE_HTTP_200, server send -> SENT_OK from fcm.googleapis.com -> reg.getNotifications() shows the live notification (worker=push-sw.js). The exact path that rendered nothing under OneSignal now works.
+
+### 2026-06-21 (cont. 2) - Native Web Push confirmed on phone; fixed corrupted VAPID env vars
+- Phone subscribe failed with: "Failed to execute 'atob' on 'Window': The string to be decoded contains characters outside of the Latin1 range." Desktop had worked only because its test used a hardcoded key.
+- Root cause: the four VAPID env vars in Vercel were set via PowerShell piping into `vercel env add`, which prepended a UTF-8 BOM (U+FEFF, code 65279) to each value. That BOM is the >Latin1 char atob rejected. Also learned: `vercel env add` reading piped/redirected stdin is unreliable here -- it intermittently stored EMPTY values.
+- Fix:
+  - Reset all four prod env vars deterministically via the Vercel REST API (POST /v10/projects/{id}/env?upsert=true, curl + bearer token from %APPDATA%\xdg.data\com.vercel.cli\auth.json). Verified via `vercel env pull`: lens 87/87/43/34, all nonascii=0. GOTCHA: the literal token "dollar-pid" is a reserved PowerShell var (process id) -- use a different variable name for the project id in API URLs.
+  - Hardened key parsing so a stray BOM/quote/whitespace can never break it again: urlBase64ToUint8Array strips non-[A-Za-z0-9-_] before atob (client); lib/push.ts cleanKey() does the same for server VAPID keys. Commit fa68cbf.
+  - Redeployed (NEXT_PUBLIC_ is inlined at build time); confirmed the clean key is present in the deployed chunk app/admin/layout-*.js.
+- RESULT: Hunter confirmed push now arrives on his phone (Samsung Galaxy S26+). End-to-end native Web Push works on desktop AND phone. OneSignal fully removed.
+- TIP for future: set Vercel env vars via the REST API or the dashboard, NOT via PowerShell-piped `vercel env add` -- the pipe corrupts (BOM) or empties values.
