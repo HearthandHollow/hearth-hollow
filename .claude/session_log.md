@@ -127,3 +127,8 @@ Last commits: `7873590` (centralize push into createNotification), `ad100b3` (in
 ### 2026-06-21 (cont. 4) - Fix notification bell overlapping header buttons
 - The global NotificationBell (fixed top-4 right-4) overlapped the top-right header buttons on desktop: Logout on /admin/dashboard (measured 36x34px overlap at 1920px) and "Back to Dashboard" on /admin/settings (same full-width header pattern). Quote-detail page uses centered max-width cards so it already cleared the bell.
 - Fix: added sm:mr-14 to the right-hand header action group on both pages so they sit left of the bell on sm+ (mobile headers stack, unaffected). Verified live: Logout now clears the bell with a 20px gap. Commit 0045fad.
+### 2026-06-22 - Dynamic admin titles + hide push button on login
+- Admin dashboard header was hardcoded "Hearth & Hollow"; theme siteName is "The Hearth and Hollow". Made both the dashboard (app/admin/dashboard/page.tsx) and the login screen (app/admin/page.tsx) fetch /api/theme client-side and render siteName (fallback "Hearth & Hollow"). Commits 24d457a, f8c53af.
+- Hid the floating "Enable push notifications" button (PushOptIn) on the login route: it now returns null when usePathname() === "/admin", so it only appears once signed in. (NotificationBell already self-hides on 401.)
+- Note: login page app/admin/page.tsx still shows a dev hint line "Password: Use the ADMIN_PASSWORD env var" -- harmless but could be removed for polish (not done, not requested).
+- All verified live in-browser: dashboard + login h1 = "The Hearth and Hollow"; no push button on /admin.
