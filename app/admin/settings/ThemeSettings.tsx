@@ -20,6 +20,7 @@ interface ThemeSettings {
   craftImageUrl: string;
   gatheringImageUrl: string;
   homesteadImageUrl: string;
+  appIconUrl?: string | null;
 }
 
 export default function ThemeSettingsTab() {
@@ -105,6 +106,7 @@ export default function ThemeSettingsTab() {
         craftImageUrl: 'https://images.unsplash.com/photo-1631396326646-c06a935ff3a6?auto=format&fit=crop&w=1200&q=80',
         gatheringImageUrl: 'https://images.unsplash.com/photo-1746701905946-f1babf656914?auto=format&fit=crop&w=1200&q=80',
         homesteadImageUrl: 'https://images.unsplash.com/photo-1771425890623-f17451025495?auto=format&fit=crop&w=1200&q=80',
+        appIconUrl: '',
       });
     }
   };
@@ -214,6 +216,49 @@ export default function ThemeSettingsTab() {
                   <p className="text-xs text-themeMuted mt-1">{caption}</p>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* App Icon */}
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+            <h2 className="text-xl font-bold mb-1">App Icon</h2>
+            <p className="text-xs text-themeMuted mb-4">
+              The icon used when you install the site to your phone&apos;s home
+              screen, plus the push-notification icon and the browser tab
+              favicon. Paste a direct image URL — use a square PNG (512×512
+              works best). Leave blank to use the built-in icon.
+            </p>
+            <div className="flex items-start gap-4">
+              <div className="w-20 h-20 rounded-2xl overflow-hidden border border-themeBorder bg-gray-100 flex-shrink-0">
+                {theme.appIconUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={theme.appIconUrl}
+                    alt="App icon"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.opacity = '0.2';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-[10px] text-themeMuted text-center px-1">
+                    default
+                  </div>
+                )}
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-semibold mb-2">App Icon URL</label>
+                <input
+                  type="text"
+                  value={theme.appIconUrl ?? ''}
+                  onChange={(e) => handleTextChange('appIconUrl', e.target.value)}
+                  className="w-full px-4 py-2 border border-themeBorder rounded-lg text-sm"
+                  placeholder="https://example.com/app-icon-512.png"
+                />
+                <p className="text-xs text-themeMuted mt-1">
+                  After saving, re-install the home-screen app to pick up a new icon.
+                </p>
+              </div>
             </div>
           </div>
 

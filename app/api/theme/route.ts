@@ -35,6 +35,7 @@ export async function GET() {
         craftImageUrl: 'https://images.unsplash.com/photo-1631396326646-c06a935ff3a6?auto=format&fit=crop&w=1200&q=80',
         gatheringImageUrl: 'https://images.unsplash.com/photo-1746701905946-f1babf656914?auto=format&fit=crop&w=1200&q=80',
         homesteadImageUrl: 'https://images.unsplash.com/photo-1771425890623-f17451025495?auto=format&fit=crop&w=1200&q=80',
+        appIconUrl: null,
       },
       { status: 200 }
     )

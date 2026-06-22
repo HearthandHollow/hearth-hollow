@@ -56,6 +56,10 @@ export async function sendAdminPush(opts: {
   title: string;
   message: string;
   url?: string;
+  /** App-icon badge count to set on the installed PWA (unread notifications). */
+  badgeCount?: number;
+  /** Notification icon URL (admin-configured app icon). */
+  icon?: string;
 }): Promise<void> {
   if (!ensureVapid()) {
     console.log("[push] VAPID not configured, skipping push:", opts.title);
@@ -78,6 +82,8 @@ export async function sendAdminPush(opts: {
     title: opts.title,
     body: opts.message,
     url,
+    ...(typeof opts.badgeCount === "number" ? { badgeCount: opts.badgeCount } : {}),
+    ...(opts.icon ? { icon: opts.icon } : {}),
   });
 
   await Promise.all(

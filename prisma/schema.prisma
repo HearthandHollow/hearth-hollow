@@ -270,6 +270,11 @@ model ThemeSettings {
   gatheringImageUrl String   @default("https://images.unsplash.com/photo-1746701905946-f1babf656914?auto=format&fit=crop&w=1200&q=80")
   homesteadImageUrl String   @default("https://images.unsplash.com/photo-1771425890623-f17451025495?auto=format&fit=crop&w=1200&q=80")
 
+  // App icon / "thumbnail" — drives the installed home-screen (PWA) icon, the
+  // push-notification icon, and the browser tab favicon. Null = use the
+  // built-in /icons/* defaults. Best supplied as a square PNG (512x512).
+  appIconUrl        String?
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

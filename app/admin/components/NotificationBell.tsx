@@ -44,8 +44,19 @@ export default function NotificationBell() {
       }
       if (!res.ok) return;
       const data = await res.json();
+      const count = data.unreadCount ?? 0;
       setNotifications(data.notifications ?? []);
-      setUnreadCount(data.unreadCount ?? 0);
+      setUnreadCount(count);
+      // Keep the installed-app icon badge in sync while the app is open
+      // (and right after marking notifications read). No-op unless installed.
+      try {
+        if (typeof navigator !== 'undefined' && 'setAppBadge' in navigator) {
+          if (count > 0) (navigator as any).setAppBadge(count);
+          else (navigator as any).clearAppBadge();
+        }
+      } catch {
+        /* badging unsupported — ignore */
+      }
     } catch {
       // Network hiccup — keep stale state, try again next poll.
     }

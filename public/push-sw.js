@@ -28,14 +28,28 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'The Hearth & Hollow';
   const options = {
     body: data.body || '',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    icon: data.icon || '/api/app-icon',
     tag: 'hearth-admin',
     renotify: true,
     data: { url: data.url || '/admin/dashboard' },
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  // Update the app-icon badge count (installed PWA only; no-op otherwise).
+  const setBadge = (async () => {
+    try {
+      if ('setAppBadge' in self.navigator) {
+        const n = typeof data.badgeCount === 'number' ? data.badgeCount : 0;
+        if (n > 0) await self.navigator.setAppBadge(n);
+        else await self.navigator.clearAppBadge();
+      }
+    } catch (e) {
+      /* badging unsupported / not installed — ignore */
+    }
+  })();
+
+  event.waitUntil(
+    Promise.all([self.registration.showNotification(title, options), setBadge])
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {

@@ -9,15 +9,17 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: process.env.NEXT_PUBLIC_COMPANY_NAME || "Handyman Quote Generator",
   description: "Quick, professional quotes for your project",
-  manifest: "/manifest.json",
+  manifest: "/site.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "H&H Admin",
   },
   icons: {
-    icon: [{ url: "/icons/icon-32.png", sizes: "32x32", type: "image/png" }],
-    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    // Resolved dynamically (see app/api/app-icon) so the favicon / home-screen
+    // icon follows the admin-configured app icon without a redeploy.
+    icon: [{ url: "/api/app-icon" }],
+    apple: [{ url: "/api/app-icon" }],
   },
 };
 

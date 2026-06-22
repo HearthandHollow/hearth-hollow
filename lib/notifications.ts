@@ -34,11 +34,29 @@ export async function createNotification(opts: {
     console.error("[notifications] failed to create notification:", err);
   }
 
+  // Gather the unread count (for the app-icon badge) and the configured app
+  // icon (for the notification image) — both best-effort.
+  let badgeCount: number | undefined;
+  let icon: string | undefined;
+  try {
+    badgeCount = await prisma.notification.count({ where: { viewedAt: null } });
+  } catch {
+    /* ignore */
+  }
+  try {
+    const theme = await prisma.themeSettings.findFirst();
+    if (theme?.appIconUrl) icon = theme.appIconUrl;
+  } catch {
+    /* ignore */
+  }
+
   try {
     await sendAdminPush({
       title: opts.title,
       message: opts.message,
       url: opts.url,
+      badgeCount,
+      icon,
     });
   } catch (err) {
     // Best-effort — push delivery is a bonus channel, never block on it.
