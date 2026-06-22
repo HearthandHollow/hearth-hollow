@@ -37,10 +37,21 @@ export default function AdminDashboard() {
   const [selectedQuotes, setSelectedQuotes] = useState<Set<string>>(new Set());
   const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [siteName, setSiteName] = useState('Hearth & Hollow');
   const router = useRouter();
 
   useEffect(() => {
     fetchQuotes();
+    // Pull the configured site name from theme settings so the dashboard
+    // header matches the rest of the site instead of a hardcoded title.
+    fetch('/api/theme')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.siteName) setSiteName(d.siteName);
+      })
+      .catch(() => {
+        /* keep fallback */
+      });
   }, []);
 
   const fetchQuotes = async () => {
@@ -189,7 +200,7 @@ export default function AdminDashboard() {
       {/* Header */}
       <div className="bg-white border-b border-themeBorder px-4 sm:px-6 py-4 flex flex-col sm:flex-row gap-3 sm:gap-4 sm:justify-between sm:items-center">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-brandDark">Hearth & Hollow</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-brandDark">{siteName}</h1>
           <p className="text-themeMuted">Admin Dashboard</p>
         </div>
         <div className="flex flex-wrap gap-2 sm:mr-14">
