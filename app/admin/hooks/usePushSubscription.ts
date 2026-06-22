@@ -13,8 +13,12 @@ const SW_URL = '/push-sw.js';
 
 // VAPID public keys are base64url; PushManager.subscribe needs the raw bytes.
 function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  // Strip anything that isn't a base64url character first — a stray BOM,
+  // surrounding quotes, or whitespace from an env-var round-trip would
+  // otherwise make atob() throw ("characters outside of the Latin1 range").
+  const clean = base64String.replace(/[^A-Za-z0-9\-_]/g, '');
+  const padding = '='.repeat((4 - (clean.length % 4)) % 4);
+  const base64 = (clean + padding).replace(/-/g, '+').replace(/_/g, '/');
   const raw = atob(base64);
   // Allocate an explicit ArrayBuffer so the result is Uint8Array<ArrayBuffer>,
   // which satisfies PushManager.subscribe's BufferSource type (a bare

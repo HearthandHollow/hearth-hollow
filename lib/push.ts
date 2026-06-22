@@ -26,13 +26,20 @@ const DEFAULT_SUBJECT = "mailto:support@thehearthhollow.com";
 
 let vapidReady = false;
 
+// Strip BOM / quotes / whitespace that can sneak in via an env-var round-trip
+// (e.g. a CLI pipe prepending a UTF-8 BOM), which would otherwise make
+// setVapidDetails reject the key.
+function cleanKey(v: string | undefined): string {
+  return (v || '').replace(/[^A-Za-z0-9\-_]/g, '');
+}
+
 function ensureVapid(): boolean {
-  const publicKey = process.env.VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  const publicKey = cleanKey(process.env.VAPID_PUBLIC_KEY);
+  const privateKey = cleanKey(process.env.VAPID_PRIVATE_KEY);
   if (!publicKey || !privateKey) return false;
   if (!vapidReady) {
     webpush.setVapidDetails(
-      process.env.VAPID_SUBJECT || DEFAULT_SUBJECT,
+      (process.env.VAPID_SUBJECT || DEFAULT_SUBJECT).trim(),
       publicKey,
       privateKey
     );
