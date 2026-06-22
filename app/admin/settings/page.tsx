@@ -29,7 +29,7 @@ export default function AdminSettingsPage() {
         </div>
         <Link
           href="/admin/dashboard"
-          className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg self-start sm:self-auto"
+          className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg self-start sm:self-auto sm:mr-14"
         >
           Back to Dashboard
         </Link>

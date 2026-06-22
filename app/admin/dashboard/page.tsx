@@ -192,7 +192,7 @@ export default function AdminDashboard() {
           <h1 className="text-2xl sm:text-3xl font-bold text-brandDark">Hearth & Hollow</h1>
           <p className="text-themeMuted">Admin Dashboard</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 sm:mr-14">
           <Link
             href="/admin/settings"
             className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-brand hover:bg-brandDark text-white rounded-lg"
