@@ -1,13 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function AdminLogin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [siteName, setSiteName] = useState('Hearth & Hollow');
   const router = useRouter();
+
+  useEffect(() => {
+    fetch('/api/theme')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.siteName) setSiteName(d.siteName);
+      })
+      .catch(() => {
+        /* keep fallback */
+      });
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +49,7 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-gradient-to-br from-amber-900 to-amber-700 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
         <h1 className="text-3xl font-bold text-brandDark mb-2">
-          Hearth & Hollow
+          {siteName}
         </h1>
         <p className="text-themeMuted mb-6">Admin Dashboard</p>
 

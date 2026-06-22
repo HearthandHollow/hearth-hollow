@@ -1,5 +1,6 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { usePushSubscription } from '../hooks/usePushSubscription';
 
 /**
@@ -14,7 +15,13 @@ import { usePushSubscription } from '../hooks/usePushSubscription';
  * gesture-nav zone or shift when Chrome's toolbar collapses.
  */
 export default function PushOptIn() {
+  const pathname = usePathname();
   const { status, subscribing, handleSubscribe } = usePushSubscription();
+
+  // Don't show on the login screen (/admin) — only once the admin is in.
+  if (pathname === '/admin') {
+    return null;
+  }
 
   if (status === 'unsupported' || status === 'subscribed' || status === 'loading') {
     return null;
