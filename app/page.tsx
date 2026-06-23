@@ -55,9 +55,6 @@ export default function Home() {
             <Link href="/request" className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-brand text-white rounded-lg hover:bg-brandDark">
               Request Quote
             </Link>
-            <Link href="/admin" className="px-3 sm:px-4 py-2 text-sm sm:text-base text-themeMuted hover:text-themeText">
-              Admin
-            </Link>
           </nav>
         </div>
       </header>

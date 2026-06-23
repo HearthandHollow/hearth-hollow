@@ -1,0 +1,11 @@
+User-agent: *
+Disallow: /admin
+Disallow: /admin/
+
+# Allow public pages
+Allow: /
+Allow: /request
+Allow: /gallery
+Allow: /schedule
+Allow: /quote-approval
+Allow: /confirmation
