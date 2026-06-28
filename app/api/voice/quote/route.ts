@@ -81,7 +81,6 @@ export async function POST(req: NextRequest) {
       body && typeof body.call === "object" && body.call !== null
         ? (body.call as Record<string, unknown>)
         : {};
-    const callId = str(call.call_id);
     const fromNumber = str(call.from_number);
 
     const name = str(args.name);
@@ -135,9 +134,7 @@ export async function POST(req: NextRequest) {
 
     // Tag the description so phone-sourced requests are obvious in the admin
     // dashboard (the schema has no dedicated `source` column).
-    const taggedDescription =
-      `${description}\n\n— Submitted by phone via AI assistant` +
-      (callId ? ` (call ${callId}).` : ".");
+    const taggedDescription = `${description}\n\nSubmitted by phone via AI assistant`;
 
     // --- Find or create customer ----------------------------------------
     let customer = await prisma.customer.findUnique({ where: { email } });
