@@ -1,4 +1,4 @@
-# Session Log — The Hearth and Hollow
+﻿# Session Log — The Hearth and Hollow
 
 Running log of work across Claude Cowork sessions. Newest first. Append a dated entry at the end of each session; keep "Current state" and "Open items" up to date.
 
@@ -16,9 +16,12 @@ Production is live and healthy on Vercel (`main` auto-deploys; only successful b
 - **Invoicing:** pdfkit-generated invoice PDFs from the estimate (material list + labor). "Create Invoice" on the quote page auto-saves and shows the inline preview in one click; "Email PDF to Customer" is available immediately alongside the preview (no forced save/close step first).
 - **Homepage imagery:** full-bleed hero + 3 accent sections (craft, gathering, homestead); images editable from `/admin/theme` -> Homepage Images card (`ThemeSettings.heroImageUrl` etc.), Unsplash stock-photo defaults.
 - **Security hardening complete:** signed-cookie admin auth, signed action tokens, debug endpoints removed, input validation/rate limiting, strong `ADMIN_PASSWORD` + `SESSION_SECRET`.
-- **Admin notifications:** OneSignal web push for the admin (new request / client reply / booking), fixed twice (dead CDN service-worker URL; switched from the dashboard Subscribed Users segment to direct Players-API lookup). Added a parallel **in-app notification bell** (NotificationBell in app/admin/layout.tsx) backed by a Notification table — lib/notifications.ts createNotification() is now the single call site that both writes the bell feed and fires the push, so future trigger points only need one call.
+- **Admin notifications:** Bell icon (top-right on all admin pages) + native Web Push to phone/desktop. OneSignal replaced by self-hosted VAPID push (`web-push` lib, `PushSubscription` table). `lib/notifications.ts createNotification()` is the single call site: writes the in-app feed row AND fires the push. Badge count on the installed PWA icon; theme-configurable app icon (drives PWA, notification icon, favicon).
+- **Deposit payments (Stripe):** Admin sets a deposit amount on an estimate; customer gets a "Pay Deposit" link via email; Stripe Checkout handles payment; webhook marks `depositPaid=true` on the `Estimate` and sends the scheduling link automatically.
+- **Voice quote intake (Retell):** Phone customers can submit a quote request via a Retell AI voice agent. `POST /api/voice/quote` accepts JSON (authenticated by `RETELL_WEBHOOK_SECRET` bearer token), creates the same Customer + ProjectRequest records and sends the same confirmation email + admin notification as the web form.
+- **Admin UX polish:** Dynamic site name in dashboard/login headers (from `ThemeSettings.siteName`); push opt-in button hidden on login screen; bell repositioned to not overlap header buttons; dev password hint removed from login.
 
-Last commits: `7873590` (centralize push into createNotification), `ad100b3` (in-app notification bell), `44e47e2` (fix push targeting via Players API), `4ce57a6` (fix dead OneSignal worker URL).
+Last commits: `ef3b099` (Stripe deposit payment), `8803378`/`1088c9b`/`9df7f35` (Retell voice agent), `9ed27e1` (hide admin from public nav/search), `efeea1f` (remove dev password hint), `f8c53af`/`24d457a` (dynamic site-name titles), `0045fad` (bell overlap fix), `e2ab451` (app-icon badge + theme-configurable icon), `342a0be`/`fa68cbf` (native Web Push replacing OneSignal).
 
 ## Open items / future ideas
 - Optional: one-time `git add --renormalize .` to clear CRLF "modified" noise in `git status`.
@@ -87,6 +90,37 @@ Last commits: `7873590` (centralize push into createNotification), `ad100b3` (in
 - Follow-ups / notes:
   - Real-device push delivery to Hunter's phone after the worker-URL and targeting fixes was never independently re-confirmed -- the conversation moved to the in-app bell before retesting. If push still doesn't arrive on that device, the next step is the device-side "Clear & reset" site data, since the server-side send was verified working via direct REST test.
   - The Edit tool requires a `Read` call on the target file within the same tracked context before it will allow an edit, even if the file's content was already seen via `Grep` or an earlier `Read` in a prior turn/segment -- ran into this once on `app/api/requests/route.ts`.
+### 2026-06-22 (cont.) - Hide admin from public nav + SEO; remove password hint
+- `app/layout.tsx` / `app/page.tsx`: removed any admin nav links from the public homepage; added `robots: noindex` metadata on `/admin/*` so crawlers can't index the admin area.
+- `app/admin/page.tsx`: removed the dev hint line ("Password: Use ADMIN_PASSWORD env var") from the login screen. Commit `efeea1f`.
+- Commits: `9ed27e1`, `efeea1f`.
+
+### 2026-06-23 - Retell AI voice quote agent
+- What was requested: a phone-call intake path so customers can request a quote by calling a phone number (Retell AI agent handles the conversation).
+- What changed:
+  - New `app/api/voice/quote/route.ts`: POST endpoint accepting JSON from Retell. Authenticates via `Authorization: Bearer RETELL_WEBHOOK_SECRET`. Creates Customer + ProjectRequest exactly like the web form (no file uploads). Sends the customer confirmation email + `createNotification()` to the admin.
+  - `RETELL_WEBHOOK_SECRET` env var added to Vercel.
+  - New `RETELL_VOICE_QUOTE_SETUP.md` in repo root documenting the Retell agent configuration (agent IDs, webhook URL, `www.` URL fix for CORS).
+  - Commits: `9df7f35` (endpoint), `1088c9b` (setup doc), `8803378` (tag simplification + doc update).
+- Migrations run: none (no schema change).
+- Deployed? Yes.
+
+### 2026-06-23 - Stripe deposit payment feature
+- What was requested: admin can set a deposit amount; customer gets a payment link; scheduling link is sent automatically after payment clears.
+- What changed:
+  - Schema: added `depositAmount Float?`, `depositPaid Boolean @default(false)`, `depositStripeSessionId String?` to `Estimate` model. `prisma db push` run.
+  - `stripe` npm package added (`^22.3.0`).
+  - `app/api/quotes/[id]/deposit-checkout/route.ts`: creates a Stripe Checkout session for the deposit amount; returns the URL. Called from the quote-approval page after the customer clicks "Pay Deposit".
+  - `app/api/webhooks/stripe/route.ts`: listens for `checkout.session.completed`; marks `estimate.depositPaid = true`; sends the scheduling link email to the customer. Requires `STRIPE_WEBHOOK_SECRET` for signature verification.
+  - `app/api/admin/quotes/[id]/estimate/route.ts`: PATCH now accepts `depositAmount` to let the admin set/clear the deposit on an estimate.
+  - `app/api/quotes/[id]/approve/route.ts`: on approval, if `depositAmount` is set and not yet paid, sends a deposit-request email instead of the scheduling link; scheduling link is deferred until `webhooks/stripe` marks it paid.
+  - `lib/email.ts`: new `sendDepositRequestEmail` function (deposit amount + Stripe Checkout URL).
+  - `app/admin/quotes/[id]/page.tsx`: new Deposit section in the estimate editor (amount input, paid/unpaid badge).
+  - `app/admin/layout.tsx`: minor layout tweak to accommodate Deposit UI.
+  - Env vars added to Vercel: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`.
+  - Commit: `ef3b099`.
+- Migrations run: `prisma db push` for the 3 new `Estimate` deposit fields.
+- Deployed? Yes -- `ef3b099`, state READY.
 ## How to log a new session (template)
 ```
 ### <date> — <short title>
