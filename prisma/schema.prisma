@@ -145,6 +145,11 @@ model Estimate {
   // Which tier (low/expected/high) the admin has selected to actually quote the customer
   selectedTier String @default("expected") // "low" | "expected" | "high"
 
+  // Deposit tracking
+  depositAmount Float?    // configurable deposit amount (cents)
+  depositPaid   Boolean   @default(false)
+  depositStripeSessionId String? // Stripe checkout session ID for tracking
+
   // Status
   status      String     @default("pending")
   sentAt      DateTime?

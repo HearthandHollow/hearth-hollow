@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyActionToken, createActionToken } from '@/lib/auth'
 import { getBaseUrl } from '@/lib/site'
+import { sendDepositRequestEmail } from '@/lib/email'
 
 export async function GET(
   request: NextRequest,
@@ -18,17 +19,17 @@ export async function GET(
 
     const project = await prisma.projectRequest.findUnique({
       where: { id: params.id },
-      include: { customer: true },
+      include: { customer: true, estimate: true },
     })
 
-    if (!project) {
+    if (!project || !project.estimate) {
       return NextResponse.redirect(`${baseUrl}/request?error=Quote not found`)
     }
 
     await prisma.projectRequest.update({
       where: { id: params.id },
       data: {
-        approvalStatus: 'active',
+        approvalStatus: project.estimate.depositAmount ? 'awaiting_deposit' : 'active',
         clientApprovedAt: new Date(),
         clientDeniedAt: null,
         status: 'accepted',
@@ -36,7 +37,36 @@ export async function GET(
       },
     })
 
-    // Send the client to the scheduling page with a signed schedule token.
+    // If a deposit is required, send deposit email with checkout link
+    if (project.estimate.depositAmount && project.estimate.depositAmount > 0) {
+      // Get the checkout URL from our endpoint
+      const checkoutResponse = await fetch(
+        `${baseUrl}/api/quotes/${params.id}/deposit-checkout`,
+        { method: 'POST' }
+      )
+
+      if (!checkoutResponse.ok) {
+        console.error('Failed to create checkout session')
+        return NextResponse.redirect(`${baseUrl}/request?error=Failed to process quote approval`)
+      }
+
+      const { checkoutUrl } = await checkoutResponse.json()
+
+      // Send deposit request email
+      await sendDepositRequestEmail(
+        project.customer.email,
+        project.customer.name,
+        params.id,
+        project.estimate.depositAmount,
+        checkoutUrl
+      )
+
+      return NextResponse.redirect(
+        `${baseUrl}/quote-approval/${params.id}?status=deposit_requested`
+      )
+    }
+
+    // No deposit required, send to scheduling page
     const scheduleToken = createActionToken(`${params.id}:schedule`)
     return NextResponse.redirect(
       `${baseUrl}/schedule/${params.id}?token=${scheduleToken}`

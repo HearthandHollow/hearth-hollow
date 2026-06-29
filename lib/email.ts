@@ -216,3 +216,53 @@ export async function sendBookingConfirmationEmail(
     throw error;
   }
 }
+
+export async function sendDepositRequestEmail(
+  customerEmail: string,
+  customerName: string,
+  projectId: string,
+  depositAmount: number,
+  checkoutUrl: string
+) {
+  const formattedAmount = (depositAmount / 100).toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+  });
+
+  try {
+    const result = await resend.emails.send({
+      from: SENDER_EMAIL,
+      to: customerEmail,
+      reply_to: "quotes@thehearthhollow.com",
+      subject: `Deposit Required: ${formattedAmount} - Reference #${projectId}`,
+      html: `
+        <h2>Great! Your quote is approved</h2>
+        <p>Hi ${customerName},</p>
+        <p>Thank you for approving your estimate! To secure your project date, we need a deposit of <strong>${formattedAmount}</strong>.</p>
+
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0;"><strong>Deposit Amount:</strong> ${formattedAmount}</p>
+          <p style="margin: 8px 0 0; font-size: 12px; color: #666;">Reference: ${projectId}</p>
+        </div>
+
+        <div style="margin: 30px 0;">
+          <a href="${checkoutUrl}"
+             style="background-color: #ea580c; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+            Pay Deposit Now
+          </a>
+        </div>
+
+        <p>Once we receive your deposit, we'll send you the next steps for scheduling your project date.</p>
+        <p>Questions? Just reply to this email and we'll be happy to help!</p>
+
+        <p>Best regards,<br/>The Hearth &amp; Hollow Team</p>
+      `,
+      text: `Great! Your quote is approved\n\nHi ${customerName},\n\nThank you for approving your estimate! To secure your project date, we need a deposit of ${formattedAmount}.\n\nDeposit Amount: ${formattedAmount}\nReference: ${projectId}\n\nPay your deposit here: ${checkoutUrl}\n\nOnce we receive your deposit, we'll send you the next steps for scheduling your project date.\n\nQuestions? Just reply to this email and we'll be happy to help!\n\nBest regards,\nThe Hearth & Hollow Team`,
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Failed to send deposit request email:", error);
+    throw error;
+  }
+}

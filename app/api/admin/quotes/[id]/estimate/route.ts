@@ -25,6 +25,7 @@ export async function PATCH(
       materialList,
       timeEstimation,
       selectedTier,
+      depositAmount,
     } = body
 
     // Only mark the estimate as manually edited if something beyond the
@@ -67,6 +68,7 @@ export async function PATCH(
         materialList: normalizedMaterialList,
         timeEstimation: timeEstimation || undefined,
         selectedTier: validTier,
+        depositAmount: depositAmount !== undefined ? parseFloat(depositAmount) : undefined,
         isEdited: isSubstantiveEdit ? true : undefined,
         updatedAt: new Date(),
       },
