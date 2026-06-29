@@ -41,6 +41,7 @@ interface Quote {
     timeEstimation?: string;
     isEdited?: boolean;
     selectedTier?: 'low' | 'expected' | 'high';
+    depositAmount?: number;
   };
 }
 
