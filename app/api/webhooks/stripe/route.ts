@@ -6,7 +6,7 @@ import { createActionToken } from '@/lib/auth';
 import { getBaseUrl } from '@/lib/site';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2026-06-24.dahlia',
+  apiVersion: '2024-04-10',
 });
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
