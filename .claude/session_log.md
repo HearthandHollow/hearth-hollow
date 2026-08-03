@@ -166,3 +166,12 @@ Last commits: `ef3b099` (Stripe deposit payment), `8803378`/`1088c9b`/`9df7f35` 
 - Hid the floating "Enable push notifications" button (PushOptIn) on the login route: it now returns null when usePathname() === "/admin", so it only appears once signed in. (NotificationBell already self-hides on 401.)
 - Note: login page app/admin/page.tsx still shows a dev hint line "Password: Use the ADMIN_PASSWORD env var" -- harmless but could be removed for polish (not done, not requested).
 - All verified live in-browser: dashboard + login h1 = "The Hearth and Hollow"; no push button on /admin.
+
+### 2026-08-03 — Session-organization system (cross-surface)
+- What was requested: a start-to-finish system for organizing Claude chat/Cowork/Code sessions and turning Sage + the vault into a personal-assistant hub that routes and delegates work per project.
+- What changed (files / commits):
+  - Obsidian vault (not this repo): new `Homestead/Claude Operating Guide.md` (routing table, delegation rules for Sage, session lifecycle, weekly ritual, memory-placement rules); new `Inbox/Session Triage — one-time cleanup.md` (one-time checklist for Hunter); `Home.md` "Start here" links the guide.
+  - This repo: `.claude/CLAUDE.md` gained a "Session hygiene & the wider assistant system" section (log-before-close rule, no doc duplication, pointer to the vault guide).
+- Migrations run: none.
+- Deployed? Docs only — no build impact. Pushed to branch `claude/session-organization-strategy-7jeahi` (not main).
+- Follow-ups / notes: Hunter runs the one-time triage checklist (delete logged sessions, set up claude.ai Projects, add the operating-guide pointer to Sage's standing instructions). All hearth-hollow sessions through the 2026-06-23 log entries are captured here and safe to delete.

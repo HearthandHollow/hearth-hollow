@@ -68,5 +68,11 @@ Internal package name is still `handyman-quote-generator` (v0.2.0).
 - **`.claude/` is write-protected from the Edit/Write tools in Cowork sessions** (resolves to a "protected location"). Use `mcp__Windows-MCP__PowerShell` with `[System.IO.File]::ReadAllText` / `WriteAllText` (UTF8 encoding) to update `CLAUDE.md` or `session_log.md`. Do NOT use `Get-Content`/`Set-Content` without explicit encoding — it corrupts unicode characters (→, —, etc.).
 - **Repo path:** `C:\Users\Hammo\Claude\Projects\The Hearth and Hollow\repo` (not `C:\Users\Hammo\hearth-hollow`, which is the old path from earlier sessions and no longer exists).
 
+## Session hygiene & the wider assistant system
+- This repo is one node in a larger system. Cross-project routing, delegation rules, and session-lifecycle conventions live in the Obsidian vault note `Homestead/Claude Operating Guide.md` (shared by Sage, Desktop, Cowork, and Code sessions).
+- **This repo's `.claude/` folder is the single source of truth for hearth-hollow code context.** Do not duplicate it into claude.ai Project knowledge or the vault — those hold thin pointers only.
+- **Log before you close:** a session is done when its work is committed/deployed AND appended to `session_log.md` (template at the bottom of that file). A logged session is safe to delete.
+- If a task needed context that wasn't in `CLAUDE.md`/`session_log.md`, that's a doc bug — add it here as part of the task.
+
 ## Reference docs in repo
 `PROJECT_CONTEXT_BRIEF.md` (architecture + security-audit history), `PLAYBOOK.md`, `DEPLOYMENT.md`, `RETELL_VOICE_QUOTE_SETUP.md`, and this `.claude/` folder.
