@@ -166,3 +166,23 @@ Last commits: `ef3b099` (Stripe deposit payment), `8803378`/`1088c9b`/`9df7f35` 
 - Hid the floating "Enable push notifications" button (PushOptIn) on the login route: it now returns null when usePathname() === "/admin", so it only appears once signed in. (NotificationBell already self-hides on 401.)
 - Note: login page app/admin/page.tsx still shows a dev hint line "Password: Use the ADMIN_PASSWORD env var" -- harmless but could be removed for polish (not done, not requested).
 - All verified live in-browser: dashboard + login h1 = "The Hearth and Hollow"; no push button on /admin.
+
+### 2026-08-03 — Session-organization system (cross-surface)
+- What was requested: a start-to-finish system for organizing Claude chat/Cowork/Code sessions and turning Sage + the vault into a personal-assistant hub that routes and delegates work per project.
+- What changed (files / commits):
+  - Obsidian vault (not this repo): new `Homestead/Claude Operating Guide.md` (routing table, delegation rules for Sage, session lifecycle, weekly ritual, memory-placement rules); new `Inbox/Session Triage — one-time cleanup.md` (one-time checklist for Hunter); `Home.md` "Start here" links the guide.
+  - This repo: `.claude/CLAUDE.md` gained a "Session hygiene & the wider assistant system" section (log-before-close rule, no doc duplication, pointer to the vault guide).
+- Migrations run: none.
+- Deployed? Docs only — no build impact. Pushed to branch `claude/session-organization-strategy-7jeahi` (not main).
+- Follow-ups / notes: Hunter runs the one-time triage checklist (delete logged sessions, set up claude.ai Projects, add the operating-guide pointer to Sage's standing instructions). All hearth-hollow sessions through the 2026-06-23 log entries are captured here and safe to delete.
+
+### 2026-08-03 (cont.) — Hosting docs corrected: forge/Cloudflare is production, Vercel is a shadow copy
+- What was requested: Hunter flagged that the live thehearthhollow.com is self-hosted on forge behind a Cloudflare tunnel and asked whether merging to main would break it.
+- Verified: `thehearthhollow.com` and `www.` resolve to Cloudflare IPs (104.21.33.144 / 172.67.190.174) — DNS is on Cloudflare, matching the vault's "one tunnel, two lives" note. CLAUDE.md's "Hosted on Vercel, DNS on Vercel nameservers" was stale.
+- What changed: CLAUDE.md tech-stack hosting bullet rewritten (forge + Cloudflare tunnel = production; Vercel auto-deploy of `main` = shadow copy, NOT production); deploy workflow gained step 0 (a push to `main` does not update the live site — forge must pull/rebuild).
+- Migrations run: none. Docs only.
+- Deployed? n/a — pushed to PR #1 branch.
+- Follow-ups / notes:
+  - **Open decision for Hunter:** keep Vercel as a staging environment or disconnect the integration. If kept, its env vars will drift from forge's unless maintained.
+  - **Doc gap remaining:** how forge deploys (compose file location, pull/rebuild command, env file) is not documented in this repo — capture it here or in the vault next time forge is touched.
+  - GitHub org status: HearthandHollow org already holds hearth-hollow, pool-tournament-app, rackertracker-beta.
