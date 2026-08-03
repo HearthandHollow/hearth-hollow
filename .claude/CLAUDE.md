@@ -16,7 +16,7 @@ Internal package name is still `handyman-quote-generator` (v0.2.0).
 - **AWS S3** for file storage (presigned URLs)
 - **Anthropic SDK** — model `claude-haiku-4-5-20251001` (estimates, photo vision, email-thread analysis)
 - **Resend** for outbound email; **Gmail API** (OAuth refresh token) for reading/replying to threads; **Google Calendar API** for booking events; native **Web Push** (VAPID via the `web-push` lib) for admin push; **Stripe** for deposit payments; **Retell** for AI phone-agent quote intake
-- Hosted on **Vercel**, DNS on Vercel nameservers
+- **Hosting (updated 2026-08-03):** the live `thehearthhollow.com` is **self-hosted on forge** (homelab Docker host) behind a **Cloudflare tunnel**; DNS is on Cloudflare (site resolves to Cloudflare IPs). **Vercel still auto-deploys `main` but is a shadow copy, NOT production** — pushing to `main` does not change the live site until forge pulls and rebuilds. Open decision: keep Vercel as staging or disconnect it.
 
 ## Key files
 - `lib/auth.ts` — HMAC-signed admin session cookie + signed action tokens (approve/deny/schedule links): `verifySessionToken`, `createActionToken`, `verifyActionToken`.
@@ -46,6 +46,7 @@ Internal package name is still `handyman-quote-generator` (v0.2.0).
 - **Google OAuth refresh token must include ALL needed scopes when re-minted:** `gmail.readonly gmail.send calendar.events`. Re-minting with a subset silently breaks the others.
 
 ## Deploy workflow (IMPORTANT)
+0. **Know what you're deploying to:** `main` → Vercel shadow copy only. The REAL site updates when forge pulls/rebuilds (see Hosting note above). Don't tell Hunter something is "live" after a push to `main` — it's live on Vercel's copy, not on thehearthhollow.com, until forge updates.
 1. **Always run `npm run build` locally and confirm it's green BEFORE pushing.** (Vercel only promotes successful builds, but build first anyway.)
 2. If `prisma/schema.prisma` changed, run a DB push first (Prisma reads `.env`, not `.env.local`, so feed it the URL):
    ```powershell
