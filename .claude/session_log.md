@@ -183,6 +183,6 @@ Last commits: `ef3b099` (Stripe deposit payment), `8803378`/`1088c9b`/`9df7f35` 
 - Migrations run: none. Docs only.
 - Deployed? n/a — pushed to PR #1 branch.
 - Follow-ups / notes:
-  - **Open decision for Hunter:** keep Vercel as a staging environment or disconnect the integration. If kept, its env vars will drift from forge's unless maintained.
+  - **Open decision for Hunter:** keep Vercel as a staging environment or disconnect the integration — **this applies ONLY to the `hearth-hollow` Vercel project.** Verified 2026-08-03: the Vercel team has two projects, `hearth-hollow` (shadow copy of the forge-hosted production site) and `rackertracker-beta` (Vercel IS its production — serves at rackertracker-beta.vercel.app, no custom domain, no forge involvement). "Disconnecting Vercel" means unlinking the GitHub repo from the `hearth-hollow` project only; do not touch rackertracker-beta. (`pool-tournament-app` has no Vercel project.) If hearth-hollow's Vercel copy is kept, its env vars will drift from forge's unless maintained.
   - **Doc gap remaining:** how forge deploys (compose file location, pull/rebuild command, env file) is not documented in this repo — capture it here or in the vault next time forge is touched.
   - GitHub org status: HearthandHollow org already holds hearth-hollow, pool-tournament-app, rackertracker-beta.
