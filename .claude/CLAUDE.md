@@ -16,7 +16,7 @@ Internal package name is still `handyman-quote-generator` (v0.2.0).
 - **AWS S3** for file storage (presigned URLs)
 - **Anthropic SDK** — model `claude-haiku-4-5-20251001` (estimates, photo vision, email-thread analysis)
 - **Resend** for outbound email; **Gmail API** (OAuth refresh token) for reading/replying to threads; **Google Calendar API** for booking events; native **Web Push** (VAPID via the `web-push` lib) for admin push; **Stripe** for deposit payments; **Retell** for AI phone-agent quote intake
-- **Hosting (updated 2026-08-03):** the live `thehearthhollow.com` is **self-hosted on forge** (homelab Docker host) behind a **Cloudflare tunnel**; DNS is on Cloudflare (site resolves to Cloudflare IPs). **Vercel still auto-deploys `main` but is a shadow copy, NOT production** — pushing to `main` does not change the live site until forge pulls and rebuilds. Open decision: keep Vercel as staging or disconnect it.
+- **Hosting (updated 2026-08-03):** the live `thehearthhollow.com` is **self-hosted on forge** (homelab Docker host) behind a **Cloudflare tunnel**; DNS is on Cloudflare (site resolves to Cloudflare IPs). **Vercel still auto-deploys `main` but is a shadow copy, NOT production** — pushing to `main` does not change the live site until forge pulls and rebuilds. Open decision: keep Vercel as staging or disconnect it — hearth-hollow project only; the same Vercel team also hosts `rackertracker-beta`, and Vercel IS that app's production, so never disconnect at the team level.
 
 ## Key files
 - `lib/auth.ts` — HMAC-signed admin session cookie + signed action tokens (approve/deny/schedule links): `verifySessionToken`, `createActionToken`, `verifyActionToken`.
