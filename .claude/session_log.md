@@ -200,3 +200,8 @@ Last commits: `ef3b099` (Stripe deposit payment), `8803378`/`1088c9b`/`9df7f35` 
 - Build: green locally (`prisma generate && next build`; dummy RESEND/STRIPE keys needed in the container because those clients construct at module scope — not a code issue).
 - Deployed? No — pushed to feature branch only. To go live: merge → forge pull/rebuild, plus one-time infra: (1) Cloudflare DNS + tunnel public hostname for skydive-weather.thehearthhollow.com → same forge container; (2) hourly cron-job.org job for /api/cron/skydive-notify; (3) db push.
 - Follow-ups / notes: user typed "theheartthollow.com" in the request — built against the real domain thehearthhollow.com. NWS = US locations only (signup validates). Optional env `SKYDIVE_SITE_URL` overrides emailed-link base.
+
+### 2026-08-07 — Skydive Weather: merged + DB migrated (go-live steps 1-3)
+- Hunter said "do 1 then 2 then 3" (the go-live checklist). Done from the cloud session: PR #3 created and merged to main; Vercel auto-deploy built green and its `prisma db push` created `skydive_users` on the production Neon DB (verified in build logs + /skydive returns 200 on the main-branch alias).
+- NOT doable from a cloud session (forge/Cloudflare/cron-job.org are behind Hunter's Tailscale/accounts): forge pull+rebuild, Cloudflare tunnel public hostname for skydive-weather.thehearthhollow.com, hourly cron-job.org job for /api/cron/skydive-notify?secret=CRON_SECRET. Handed to Hunter with exact steps; do the tunnel hostname BEFORE enabling the cron so emailed dashboard links resolve.
+- Note: once forge rebuilds, the site is usable at thehearthhollow.com/skydive even before the subdomain exists.
