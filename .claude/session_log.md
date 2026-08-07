@@ -205,3 +205,31 @@ Last commits: `ef3b099` (Stripe deposit payment), `8803378`/`1088c9b`/`9df7f35` 
 - Hunter said "do 1 then 2 then 3" (the go-live checklist). Done from the cloud session: PR #3 created and merged to main; Vercel auto-deploy built green and its `prisma db push` created `skydive_users` on the production Neon DB (verified in build logs + /skydive returns 200 on the main-branch alias).
 - NOT doable from a cloud session (forge/Cloudflare/cron-job.org are behind Hunter's Tailscale/accounts): forge pull+rebuild, Cloudflare tunnel public hostname for skydive-weather.thehearthhollow.com, hourly cron-job.org job for /api/cron/skydive-notify?secret=CRON_SECRET. Handed to Hunter with exact steps; do the tunnel hostname BEFORE enabling the cron so emailed dashboard links resolve.
 - Note: once forge rebuilds, the site is usable at thehearthhollow.com/skydive even before the subdomain exists.
+
+---
+
+## Forge self-host deploy procedure + Skydive Weather go-live (2026-08-06)
+
+The site is self-hosted on forge (192.168.10.207) as Docker (in addition to Vercel). Previously-undocumented forge deploy runbook.
+
+**Stack:** `/opt/stacks/hearthhollow/` (docker compose). Services: `app` (Next.js, container `hearthhollow-app`, image `hearthhollow-app:latest`, host **:3005** -> container :3000), `db` (postgres:18, container `hearthhollow-db`), `cloudflared` (tunnel routing thehearthhollow.com + skydive-weather.thehearthhollow.com to `app`).
+
+**Source / build context:** `/opt/stacks/hearthhollow/app/` -- NOT a git checkout. Source is shipped as a tarball (`git archive origin/main`) from a machine with GitHub access and extracted here (forge has NO GitHub auth). The forge-only Dockerfile is `app/Dockerfile` (main has no Dockerfile) and MUST be preserved across source updates.
+
+**Rebuild to deploy latest main:**
+1. On a box with access to HearthandHollow/hearth-hollow: `git archive --format=tar.gz -o hh-main.tgz origin/main`
+2. scp to `/opt/stacks/hearthhollow/`, extract to a fresh dir, copy forge `app/Dockerfile` (+ `.dockerignore`, `.env.production`) into it, swap in as `app/` (keep old as `app.old.<ts>`).
+3. `cd /opt/stacks/hearthhollow/app && docker build -t hearthhollow-app:latest --build-arg NEXT_PUBLIC_VAPID_PUBLIC_KEY="$(grep ^NEXT_PUBLIC_VAPID_PUBLIC_KEY= ../.env.app|cut -d= -f2-)" .`  (Dockerfile builds with a DUMMY DATABASE_URL + SKIP_ENV_VALIDATION and runs `npx prisma generate && npx next build` -- it does NOT run `prisma db push`, so a rebuild never touches any DB.)
+4. `cd .. && docker compose up -d app`  (recreates ONLY app onto the new :latest; wait for image export to fully finish first or compose keeps the old image).
+
+**Env files (runtime):** `/opt/stacks/hearthhollow/.env.app` (chmod 600; holds CRON_SECRET, DATABASE_URL, all API keys), plus `.env.db`, `.env.cloudflared`.
+
+**Verify:** thehearthhollow.com/ (handyman home 200), /skydive (skydive landing 200), skydive-weather.thehearthhollow.com/ (skydive landing via `middleware.ts` hostname routing, NOT handyman), /dashboard (200).
+
+### Skydive hourly notify cron
+- Endpoint `GET /api/cron/skydive-notify?secret=<CRON_SECRET>` runs hourly. The existing check-email-replies poller is on cron-job.org (external, maintainer account -- not reachable from automation), so the skydive cron was placed on **forge**:
+  - Script `/opt/stacks/hearthhollow/skydive-notify-cron.sh` (reads CRON_SECRET from .env.app, curls the endpoint, appends to `/var/log/skydive-notify.log`; secret NOT in the script or crontab).
+  - **Root crontab:** `0 * * * * /opt/stacks/hearthhollow/skydive-notify-cron.sh`
+
+### DB note (resolved 2026-08-06)
+- The app's `DATABASE_URL` points at the LOCAL postgres container (`db:5432/hearthhollow` = container `hearthhollow-db`), NOT Neon. The skydive migration had run on Neon, so `public.skydive_users` was missing in the DB the app reads -> `/api/cron/skydive-notify` and the signup form 500'd. **Fixed** by `docker exec hearthhollow-app npx prisma db push` (synced schema to the local db, non-destructive; endpoint now returns `{"users":0,"due":0,"sent":0,"errors":[]}` 200). If Neon is ever meant to be the live DB, repoint DATABASE_URL instead.
