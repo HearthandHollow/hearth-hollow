@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Small-multiple hourly charts for one selected day: wind/gusts, cloud/precip,
  * and temperature — each on its own axis (never dual-axis), with the user's
  * limits drawn as dashed reference lines and hours outside the limits shaded.
+ *
+ * Compact charts are an overview (mouse hover still shows the crosshair);
+ * tapping/clicking one opens it FULL-SCREEN with every hour labeled and a
+ * touch-friendly crosshair. Real browser fullscreen is requested where
+ * supported (Android Chrome), falling back to a fixed overlay (iOS).
  *
  * Colors are fixed per metric (categorical slots validated for CVD + contrast
  * against the slate-900 chart surface); text and axes wear ink tokens, never
@@ -62,32 +67,42 @@ interface LimitLine {
   value: number;
 }
 
-// --- One mini chart ----------------------------------------------------------
-
-const W = 600;
-const H = 170;
-const M = { l: 40, r: 8, t: 10, b: 22 };
-
-function MiniChart({
-  title,
-  unit,
-  hours,
-  series,
-  limits,
-  yDomain,
-  hoverIdx,
-  onHover,
-}: {
+interface ChartSpec {
+  key: string;
   title: string;
   unit: string;
-  hours: ChartHour[];
   series: Series[];
   limits: LimitLine[];
   yDomain: [number, number];
+}
+
+// --- One chart (renders compact or expanded) ---------------------------------
+
+const W = 600;
+
+function HourChart({
+  spec,
+  hours,
+  expanded,
+  hoverIdx,
+  onHover,
+  onExpand,
+}: {
+  spec: ChartSpec;
+  hours: ChartHour[];
+  expanded: boolean;
   hoverIdx: number | null;
   onHover: (i: number | null) => void;
+  onExpand?: () => void;
 }) {
-  const [yMin, yMax] = yDomain;
+  const H = expanded ? 300 : 170;
+  const M = expanded
+    ? { l: 44, r: 10, t: 14, b: 30 }
+    : { l: 40, r: 8, t: 10, b: 22 };
+  const fs = expanded ? 13 : 10;
+
+  const { series, limits, unit } = spec;
+  const [yMin, yMax] = spec.yDomain;
   const iw = W - M.l - M.r;
   const ih = H - M.t - M.b;
   const x = (i: number) =>
@@ -111,13 +126,29 @@ function MiniChart({
   }
 
   const gridVals = [0.25, 0.5, 0.75].map((f) => yMin + f * (yMax - yMin));
-  const tickEvery = hours.length > 8 ? 3 : 2;
+  // Expanded = the zoomed-in view: label EVERY hour.
+  const tickEvery = expanded ? 1 : hours.length > 8 ? 3 : 2;
 
-  function handlePointer(e: React.PointerEvent<SVGSVGElement>) {
+  function idxFromEvent(e: React.PointerEvent<SVGSVGElement>): number {
     const rect = e.currentTarget.getBoundingClientRect();
     const px = ((e.clientX - rect.left) / rect.width) * W;
     const i = Math.round(((px - M.l) / iw) * (hours.length - 1));
-    onHover(Math.max(0, Math.min(hours.length - 1, i)));
+    return Math.max(0, Math.min(hours.length - 1, i));
+  }
+
+  function handleMove(e: React.PointerEvent<SVGSVGElement>) {
+    // Compact charts: only mouse hover tracks the crosshair — a finger drag
+    // would fight page scrolling, and a tap is reserved for expanding.
+    if (!expanded && e.pointerType !== "mouse") return;
+    onHover(idxFromEvent(e));
+  }
+
+  function handleDown(e: React.PointerEvent<SVGSVGElement>) {
+    if (!expanded && onExpand) {
+      onExpand();
+      return;
+    }
+    onHover(idxFromEvent(e));
   }
 
   const hover = hoverIdx != null ? hours[hoverIdx] : null;
@@ -125,7 +156,9 @@ function MiniChart({
   return (
     <div className="min-w-0">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <h4 className="text-sm font-semibold text-slate-200">{title}</h4>
+        <h4 className={`font-semibold text-slate-200 ${expanded ? "text-base" : "text-sm"}`}>
+          {spec.title}
+        </h4>
         {series.length > 1 && (
           <div className="flex gap-3 text-xs text-slate-400">
             {series.map((s) => (
@@ -139,16 +172,19 @@ function MiniChart({
             ))}
           </div>
         )}
+        {!expanded && (
+          <span className="ml-auto text-xs text-sky-400">⛶ tap to zoom</span>
+        )}
       </div>
       <div className="relative mt-1">
         <svg
           viewBox={`0 0 ${W} ${H}`}
-          className="w-full touch-none select-none"
-          onPointerMove={handlePointer}
-          onPointerDown={handlePointer}
+          className={`w-full select-none ${expanded ? "touch-none" : ""}`}
+          onPointerMove={handleMove}
+          onPointerDown={handleDown}
           onPointerLeave={() => onHover(null)}
           role="img"
-          aria-label={`${title} by hour; values are also in the table below`}
+          aria-label={`${spec.title} by hour; values are also in the table below`}
         >
           {/* out-of-limits hour shading */}
           {hours.map((h, i) =>
@@ -167,7 +203,7 @@ function MiniChart({
           {gridVals.map((v) => (
             <g key={v}>
               <line x1={M.l} x2={W - M.r} y1={y(v)} y2={y(v)} stroke={C.grid} strokeWidth={1} />
-              <text x={M.l - 6} y={y(v) + 3} textAnchor="end" fontSize={10} fill={C.muted}>
+              <text x={M.l - 6} y={y(v) + 3} textAnchor="end" fontSize={fs} fill={C.muted}>
                 {Math.round(v)}
               </text>
             </g>
@@ -176,8 +212,8 @@ function MiniChart({
           <line x1={M.l} x2={W - M.r} y1={M.t + ih} y2={M.t + ih} stroke={C.axis} strokeWidth={1} />
           {hours.map((h, i) =>
             i % tickEvery === 0 ? (
-              <text key={i} x={x(i)} y={H - 6} textAnchor="middle" fontSize={10} fill={C.muted}>
-                {fmtHour(h.localHour)}
+              <text key={i} x={x(i)} y={H - 8} textAnchor="middle" fontSize={fs} fill={C.muted}>
+                {expanded ? fmtHour(h.localHour) : fmtHour(h.localHour)}
               </text>
             ) : null
           )}
@@ -198,7 +234,7 @@ function MiniChart({
                   x={W - M.r - 2}
                   y={y(l.value) - 4}
                   textAnchor="end"
-                  fontSize={9}
+                  fontSize={expanded ? 11 : 9}
                   fill={C.muted}
                 >
                   {l.label}
@@ -210,6 +246,15 @@ function MiniChart({
           {series.map((s) => (
             <path key={s.name} d={pathFor(s.values)} fill="none" stroke={s.color} strokeWidth={2} />
           ))}
+          {/* expanded view: a dot on every hour so single hours are tappable targets */}
+          {expanded &&
+            series.map((s) =>
+              s.values.map((v, i) =>
+                v == null ? null : (
+                  <circle key={`${s.name}-${i}`} cx={x(i)} cy={y(v)} r={3} fill={s.color} />
+                )
+              )
+            )}
           {/* hover crosshair + markers */}
           {hoverIdx != null && (
             <g>
@@ -228,7 +273,7 @@ function MiniChart({
                     key={s.name}
                     cx={x(hoverIdx)}
                     cy={y(v)}
-                    r={4}
+                    r={expanded ? 5 : 4}
                     fill={s.color}
                     stroke="#0f172a"
                     strokeWidth={2}
@@ -268,7 +313,79 @@ function MiniChart({
   );
 }
 
-// --- The day panel: three stacked mini charts --------------------------------
+// --- Full-screen viewer -------------------------------------------------------
+
+function FullscreenChart({
+  spec,
+  hours,
+  onClose,
+}: {
+  spec: ChartSpec;
+  hours: ChartHour[];
+  onClose: () => void;
+}) {
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    // Best-effort real fullscreen + landscape (Android Chrome); the fixed
+    // overlay is the fallback everywhere else (e.g. iOS Safari).
+    el?.requestFullscreen?.().then(
+      () => (screen.orientation as any)?.lock?.("landscape").catch(() => {}),
+      () => {}
+    );
+    const onFsChange = () => {
+      if (!document.fullscreenElement) onClose();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFsChange);
+      document.removeEventListener("keydown", onKey);
+      (screen.orientation as any)?.unlock?.();
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-slate-950 p-4"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-slate-400">
+          Drag across the chart for exact hourly values
+        </p>
+        <button
+          onClick={onClose}
+          aria-label="Close full-screen chart"
+          className="rounded-lg border border-slate-600 px-4 py-2 font-semibold text-slate-200 hover:border-sky-500"
+        >
+          ✕ Close
+        </button>
+      </div>
+      <div className="my-auto py-4">
+        <HourChart
+          spec={spec}
+          hours={hours}
+          expanded
+          hoverIdx={hoverIdx}
+          onHover={setHoverIdx}
+        />
+        <p className="mt-3 text-center text-xs text-slate-500 portrait:block landscape:hidden">
+          Rotate your phone for an even bigger view
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// --- The day panel: three stacked charts + fullscreen state -------------------
 
 export default function DayCharts({
   hours,
@@ -279,6 +396,7 @@ export default function DayCharts({
 }) {
   // One shared hover index so the crosshair tracks across all three charts.
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   if (hours.length === 0) {
     return <p className="text-sm text-slate-400">No hourly data for this day yet.</p>;
@@ -300,59 +418,77 @@ export default function DayCharts({
   const tempMin = Math.floor(minOf(temp, limits.minTempF) - tempPad);
   const tempMax = Math.ceil(maxOf(temp, Math.min(limits.maxTempF, 110)) + tempPad);
 
+  const charts: ChartSpec[] = [
+    {
+      key: "wind",
+      title: "Wind & gusts",
+      unit: " mph",
+      series: [
+        { name: "Wind", color: C.wind, values: wind },
+        { name: "Gusts", color: C.gust, values: gust },
+      ],
+      limits: [
+        { label: `wind limit ${limits.maxWindMph}`, value: limits.maxWindMph },
+        { label: `gust limit ${limits.maxGustMph}`, value: limits.maxGustMph },
+      ],
+      yDomain: [0, windMax],
+    },
+    {
+      key: "sky",
+      title: "Cloud cover & rain chance",
+      unit: "%",
+      series: [
+        { name: "Cloud cover", color: C.cloud, values: cloud },
+        { name: "Rain chance", color: C.precip, values: precip },
+      ],
+      limits: [
+        { label: `cloud limit ${limits.maxCloudPct}`, value: limits.maxCloudPct },
+        { label: `rain limit ${limits.maxPrecipPct}`, value: limits.maxPrecipPct },
+      ],
+      yDomain: [0, 100],
+    },
+    {
+      key: "temp",
+      title: "Temperature",
+      unit: "°F",
+      series: [{ name: "Temperature", color: C.temp, values: temp }],
+      limits: [
+        { label: `min ${limits.minTempF}`, value: limits.minTempF },
+        ...(limits.maxTempF <= tempMax
+          ? [{ label: `max ${limits.maxTempF}`, value: limits.maxTempF }]
+          : []),
+      ],
+      yDomain: [tempMin, tempMax],
+    },
+  ];
+
+  const expanded = charts.find((c) => c.key === expandedKey);
+
   return (
     <div className="space-y-6">
-      <MiniChart
-        title="Wind & gusts"
-        unit=" mph"
-        hours={hours}
-        series={[
-          { name: "Wind", color: C.wind, values: wind },
-          { name: "Gusts", color: C.gust, values: gust },
-        ]}
-        limits={[
-          { label: `wind limit ${limits.maxWindMph}`, value: limits.maxWindMph },
-          { label: `gust limit ${limits.maxGustMph}`, value: limits.maxGustMph },
-        ]}
-        yDomain={[0, windMax]}
-        hoverIdx={hoverIdx}
-        onHover={setHoverIdx}
-      />
-      <MiniChart
-        title="Cloud cover & rain chance"
-        unit="%"
-        hours={hours}
-        series={[
-          { name: "Cloud cover", color: C.cloud, values: cloud },
-          { name: "Rain chance", color: C.precip, values: precip },
-        ]}
-        limits={[
-          { label: `cloud limit ${limits.maxCloudPct}`, value: limits.maxCloudPct },
-          { label: `rain limit ${limits.maxPrecipPct}`, value: limits.maxPrecipPct },
-        ]}
-        yDomain={[0, 100]}
-        hoverIdx={hoverIdx}
-        onHover={setHoverIdx}
-      />
-      <MiniChart
-        title="Temperature"
-        unit="°F"
-        hours={hours}
-        series={[{ name: "Temperature", color: C.temp, values: temp }]}
-        limits={[
-          { label: `min ${limits.minTempF}`, value: limits.minTempF },
-          ...(limits.maxTempF <= tempMax
-            ? [{ label: `max ${limits.maxTempF}`, value: limits.maxTempF }]
-            : []),
-        ]}
-        yDomain={[tempMin, tempMax]}
-        hoverIdx={hoverIdx}
-        onHover={setHoverIdx}
-      />
+      {charts.map((spec) => (
+        <HourChart
+          key={spec.key}
+          spec={spec}
+          hours={hours}
+          expanded={false}
+          hoverIdx={hoverIdx}
+          onHover={setHoverIdx}
+          onExpand={() => setExpandedKey(spec.key)}
+        />
+      ))}
       <p className="text-xs text-slate-500">
-        Red-shaded hours fall outside your limits (dashed lines). Tap or hover a
-        chart for exact values — the full numbers are also in the table below.
+        Red-shaded hours fall outside your limits (dashed lines). Tap any chart
+        to zoom it full-screen with every hour labeled — the full numbers are
+        also in the table below.
       </p>
+      {expanded && (
+        <FullscreenChart
+          spec={expanded}
+          hours={hours}
+          onClose={() => setExpandedKey(null)}
+        />
+      )}
     </div>
   );
 }
