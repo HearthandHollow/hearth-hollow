@@ -236,3 +236,10 @@ The site is self-hosted on forge (192.168.10.207) as Docker (in addition to Verc
 ### 2026-08-07 (cont.) — Select-text fix + forge OTA auto-deploy
 - Notify-hour <select> on the dashboard rendered its value invisibly on Android (form controls don't inherit text color; default black on dark bg). Fixed with explicit text-slate-100 + color-scheme:dark.
 - Hunter asked for OTA changes: added `deploy/forge-autodeploy.sh` + `deploy/README.md` — root cron on forge polls GitHub every 5 min (repo is public, no auth), on a new main commit pulls the tarball, overlays forge-only files (Dockerfile/.dockerignore/.env.production), rebuilds hearthhollow-app:latest, restarts only `app`, health-checks :3005, auto-rolls-back to the prev image on failure. Once dispatch installs it, merge-to-main IS the deploy. DB migrations still manual (`docker exec hearthhollow-app npx prisma db push`).
+
+### 2026-08-07 (cont. 2) — Day-detail pages, fullscreen charts, OTA verified
+- OTA loop verified end-to-end with new `/api/skydive/version` deploy-stamp endpoint (PR #8): merge → live in ~5-7 min, unattended. Bump DEPLOY_STAMP in a PR to track any future deploy.
+- PR #9: day cards now open a dedicated page `/skydive/dashboard/day?d=<date>` — stats grid (best jump window, temp range, peak wind/gusts, max cloud/rain, lowest ceiling, sunrise/sunset via NOAA equation in `day/suntimes.ts`), hourly graphs, collapsible per-hour table, and a "this day in skydiving history" fact card (`day/facts.ts`, 8 dated events + rotating generic facts). Shared client types extracted to `dashboard/types.ts`.
+- PR #10: tap any chart → full-screen viewer (requestFullscreen + landscape lock on Android, overlay fallback on iOS) with every hour labeled, per-hour dots, touch-drag crosshair tooltip. Compact charts keep mouse hover; touch reserved for expanding.
+- Earlier same day (PRs #5-#7, logged above piecemeal): stuck-zero threshold inputs fixed, dashboard refresh button + day graphs, invisible notify-hour select fixed, forge OTA autodeploy script.
+- All verified live via version stamp + scripted phone-viewport renders before merge.
