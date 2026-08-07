@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Small-multiple hourly charts for one selected day: wind/gusts, cloud/precip,
@@ -136,6 +136,10 @@ function HourChart({
     return Math.max(0, Math.min(hours.length - 1, i));
   }
 
+  // Where the touch/press started — used to tell a genuine tap from a scroll
+  // that merely began on the chart.
+  const downPos = useRef<{ x: number; y: number } | null>(null);
+
   function handleMove(e: React.PointerEvent<SVGSVGElement>) {
     // Compact charts: only mouse hover tracks the crosshair — a finger drag
     // would fight page scrolling, and a tap is reserved for expanding.
@@ -144,11 +148,17 @@ function HourChart({
   }
 
   function handleDown(e: React.PointerEvent<SVGSVGElement>) {
-    if (!expanded && onExpand) {
-      onExpand();
-      return;
-    }
-    onHover(idxFromEvent(e));
+    downPos.current = { x: e.clientX, y: e.clientY };
+    if (expanded) onHover(idxFromEvent(e));
+  }
+
+  function handleClick(e: React.MouseEvent<SVGSVGElement>) {
+    // Expand only on a completed tap/click. Browsers already suppress click
+    // when a touch becomes a scroll; the distance guard catches the rest.
+    if (expanded || !onExpand) return;
+    const d = downPos.current;
+    if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 12) return;
+    onExpand();
   }
 
   const hover = hoverIdx != null ? hours[hoverIdx] : null;
@@ -182,6 +192,7 @@ function HourChart({
           className={`w-full select-none ${expanded ? "touch-none" : ""}`}
           onPointerMove={handleMove}
           onPointerDown={handleDown}
+          onClick={handleClick}
           onPointerLeave={() => onHover(null)}
           role="img"
           aria-label={`${spec.title} by hour; values are also in the table below`}
