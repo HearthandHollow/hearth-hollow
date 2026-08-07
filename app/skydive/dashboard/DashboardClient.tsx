@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { skydivePath } from "../paths";
+import DayCharts from "./DayCharts";
 
 // --- API response shapes (mirror /api/skydive/me and /forecast) -------------
 
@@ -107,6 +108,8 @@ export default function DashboardClient() {
   const [forecast, setForecast] = useState<Forecast | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   const [draft, setDraft] = useState<DraftParams | null>(null);
   const [notifyEnabled, setNotifyEnabled] = useState(true);
@@ -119,7 +122,25 @@ export default function DashboardClient() {
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error || "Couldn't load forecast");
     setForecast(data);
+    // Keep the selected day if it still exists, else default to the first day.
+    setSelectedDay((cur) =>
+      cur && data.days?.some((d: DaySummary) => d.dateKey === cur)
+        ? cur
+        : data.days?.[0]?.dateKey ?? null
+    );
   }, [auth]);
+
+  async function refresh() {
+    setRefreshing(true);
+    setError(null);
+    try {
+      await loadForecast();
+    } catch (err: any) {
+      setError(err?.message || "Couldn't refresh the forecast.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   useEffect(() => {
     if (!u || !t) {
@@ -167,6 +188,8 @@ export default function DashboardClient() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Couldn't save settings");
       setSaved(true);
+      // Keep the in-memory profile in sync so the charts use the new limits.
+      setMe((m) => (m ? { ...m, params: { ...m.params, ...parsed } } : m));
       // Normalize the fields to what was actually saved ("010" -> "10").
       setDraft((d) =>
         d
@@ -230,14 +253,24 @@ export default function DashboardClient() {
             {me?.email} · limits are yours alone
           </p>
         </div>
-        {today && todayUi && (
-          <div className={`rounded-xl px-6 py-4 text-center ${todayUi.cls}`}>
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/80">
-              Today
-            </p>
-            <p className="text-xl font-black text-white">{todayUi.label}</p>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={refresh}
+            disabled={refreshing}
+            className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-300 hover:border-sky-500 hover:text-sky-300 disabled:opacity-50"
+            title="Re-check the latest NWS forecast"
+          >
+            {refreshing ? "Refreshing…" : "↻ Refresh"}
+          </button>
+          {today && todayUi && (
+            <div className={`rounded-xl px-6 py-4 text-center ${todayUi.cls}`}>
+              <p className="text-xs font-semibold uppercase tracking-wider text-white/80">
+                Today
+              </p>
+              <p className="text-xl font-black text-white">{todayUi.label}</p>
+            </div>
+          )}
+        </div>
       </header>
 
       {error && (
@@ -250,10 +283,15 @@ export default function DashboardClient() {
       <section className="mt-8 grid gap-4 sm:grid-cols-3">
         {(forecast?.days || []).slice(0, 3).map((day) => {
           const ui = RATING_UI[day.rating];
+          const selected = day.dateKey === selectedDay;
           return (
-            <div
+            <button
               key={day.dateKey}
-              className={`rounded-xl border bg-slate-900/70 p-4 ${ui.ring}`}
+              onClick={() => setSelectedDay(day.dateKey)}
+              aria-pressed={selected}
+              className={`rounded-xl border bg-slate-900/70 p-4 text-left transition hover:bg-slate-800/80 ${ui.ring} ${
+                selected ? "ring-2 ring-sky-400" : ""
+              }`}
             >
               <div
                 className={`inline-block rounded-full px-3 py-1 text-xs font-bold text-white ${ui.cls}`}
@@ -271,7 +309,10 @@ export default function DashboardClient() {
                     ? `Blockers: ${day.topReasons.join(", ")}`
                     : "Outside forecast range"}
               </p>
-            </div>
+              <p className={`mt-2 text-xs ${selected ? "text-sky-300" : "text-slate-500"}`}>
+                {selected ? "▾ showing graphs below" : "Tap to view graphs"}
+              </p>
+            </button>
           );
         })}
         {forecast && forecast.days.length === 0 && (
@@ -280,6 +321,26 @@ export default function DashboardClient() {
           </p>
         )}
       </section>
+
+      {/* Selected-day graphs */}
+      {me &&
+        selectedDay &&
+        (() => {
+          const day = forecast?.days.find((d) => d.dateKey === selectedDay);
+          if (!day) return null;
+          const chartHours = daylight.filter((h) => h.dateKey === selectedDay);
+          return (
+            <section className="mt-10 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <h2 className="text-lg font-bold">{day.label} — graphs</h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Daylight hours vs your limits · pick another day above
+              </p>
+              <div className="mt-5">
+                <DayCharts hours={chartHours} limits={me.params} />
+              </div>
+            </section>
+          );
+        })()}
 
       {/* Hour-by-hour */}
       <section className="mt-10">

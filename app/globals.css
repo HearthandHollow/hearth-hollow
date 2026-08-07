@@ -34,3 +34,19 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Skydive Weather micro-site: neutralize the Hearth & Hollow theme's global
+   heading/link colors (styles/theme.css paints h1-h6 and links in the brand
+   color) so the skydive brand keeps its own palette. */
+.skydive-root h1,
+.skydive-root h2,
+.skydive-root h3,
+.skydive-root h4,
+.skydive-root h5,
+.skydive-root h6 {
+  font-family: inherit;
+  color: inherit;
+}
+.skydive-root a {
+  color: inherit;
+}
