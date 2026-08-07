@@ -243,3 +243,8 @@ The site is self-hosted on forge (192.168.10.207) as Docker (in addition to Verc
 - PR #10: tap any chart → full-screen viewer (requestFullscreen + landscape lock on Android, overlay fallback on iOS) with every hour labeled, per-hour dots, touch-drag crosshair tooltip. Compact charts keep mouse hover; touch reserved for expanding.
 - Earlier same day (PRs #5-#7, logged above piecemeal): stuck-zero threshold inputs fixed, dashboard refresh button + day graphs, invisible notify-hour select fixed, forge OTA autodeploy script.
 - All verified live via version stamp + scripted phone-viewport renders before merge.
+
+### 2026-08-07 (cont. 3) — Fullscreen/touch UX round + skydiver animation
+- Iterated with Hunter live on phone: fullscreen chart now fits the screen in both orientations (viewport-measured, 100dvh, fullscreen requested in the tap handler — PR #12); accidental opens while scrolling eliminated by making touch expansion button-only (⛶ Zoom per chart; chart-body click still expands for mouse — PRs #13-#14); touch crosshair slider restored on compact charts via touch-action pan-y (PR #15).
+- New `dashboard/SkydiverScene.tsx` (PR #15): animated inline-SVG skydiver in the header — sky by verdict, clouds/wind/rain/lightning driven by real conditions. Dashboard = current hour; day page = day aggregates.
+- Every deploy confirmed live via the version stamp (~3-5 min each, OTA cron).
