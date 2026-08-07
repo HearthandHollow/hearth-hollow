@@ -74,6 +74,17 @@ function fmtHour(h: number): string {
 const fmt = (v: number | null, suffix = "") =>
   v == null ? "—" : `${Math.round(v)}${suffix}`;
 
+// Threshold inputs hold raw text while editing (so the field can be emptied
+// mid-typing — coercing to Number onChange re-renders "" as 0, leaving a
+// stuck leading zero on mobile). Values are parsed on save.
+type DraftParams = Record<keyof Params, string>;
+
+function toDraft(p: Params): DraftParams {
+  return Object.fromEntries(
+    Object.entries(p).map(([k, v]) => [k, String(v)])
+  ) as DraftParams;
+}
+
 // --- Settings editor ---------------------------------------------------------
 
 const THRESHOLD_FIELDS: Array<{ key: keyof Params; label: string; hint: string }> = [
@@ -97,7 +108,7 @@ export default function DashboardClient() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [draft, setDraft] = useState<Params | null>(null);
+  const [draft, setDraft] = useState<DraftParams | null>(null);
   const [notifyEnabled, setNotifyEnabled] = useState(true);
   const [notifyHour, setNotifyHour] = useState(7);
   const [saving, setSaving] = useState(false);
@@ -122,7 +133,7 @@ export default function DashboardClient() {
         const meData = await meRes.json();
         if (!meRes.ok) throw new Error(meData?.error || "Couldn't sign you in");
         setMe(meData);
-        setDraft(meData.params);
+        setDraft(toDraft(meData.params));
         setNotifyEnabled(meData.notifyEnabled);
         setNotifyHour(meData.notifyHour);
         await loadForecast();
@@ -140,14 +151,33 @@ export default function DashboardClient() {
     setSaved(false);
     setError(null);
     try {
+      // Parse the text fields; blank/invalid entries are simply not sent, so
+      // the server keeps that threshold's previous value.
+      const parsed: Partial<Params> = {};
+      for (const { key } of THRESHOLD_FIELDS) {
+        const raw = draft[key].trim();
+        const n = Number(raw);
+        if (raw !== "" && Number.isFinite(n)) parsed[key] = n;
+      }
       const res = await fetch("/api/skydive/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ u, t, ...draft, notifyEnabled, notifyHour }),
+        body: JSON.stringify({ u, t, ...parsed, notifyEnabled, notifyHour }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Couldn't save settings");
       setSaved(true);
+      // Normalize the fields to what was actually saved ("010" -> "10").
+      setDraft((d) =>
+        d
+          ? {
+              ...d,
+              ...(Object.fromEntries(
+                Object.entries(parsed).map(([k, v]) => [k, String(v)])
+              ) as Partial<DraftParams>),
+            }
+          : d
+      );
       await loadForecast(); // re-score the forecast against the new limits
     } catch (err: any) {
       setError(err?.message || "Couldn't save settings.");
@@ -333,11 +363,12 @@ export default function DashboardClient() {
                   {label}
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
                   value={draft[key]}
                   onChange={(e) =>
-                    setDraft({ ...draft, [key]: Number(e.target.value) })
+                    setDraft({ ...draft, [key]: e.target.value })
                   }
                 />
                 <p className="mt-1 text-xs text-slate-500">{hint}</p>
