@@ -449,10 +449,12 @@ export default function DashboardClient() {
             </label>
             <label className="flex items-center gap-2 text-sm text-slate-300">
               around
+              {/* Form controls don't inherit text color on Android — without an
+                  explicit color the selected value renders black-on-dark. */}
               <select
                 value={notifyHour}
                 onChange={(e) => setNotifyHour(Number(e.target.value))}
-                className="rounded-lg border border-slate-700 bg-slate-800 px-2 py-1"
+                className="rounded-lg border border-slate-700 bg-slate-800 px-2 py-1 text-slate-100 [color-scheme:dark]"
                 disabled={!notifyEnabled}
               >
                 {Array.from({ length: 24 }, (_, h) => (
