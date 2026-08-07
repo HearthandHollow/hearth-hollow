@@ -247,6 +247,46 @@ model PushSubscription {
   @@map("push_subscriptions")
 }
 
+// A subscriber of the Skydive Weather micro-site
+// (skydive-weather.thehearthhollow.com — served by this same app via a
+// host-based middleware rewrite to /skydive/*). Each user has a US location
+// resolved against the NWS (api.weather.gov) point/grid, personal go/no-go
+// weather thresholds, and daily-email notification preferences. Access is via
+// emailed magic links (HMAC action tokens), no password.
+model SkydiveUser {
+  id            String  @id @default(cuid())
+  email         String  @unique
+  name          String?
+
+  // Location + cached NWS grid mapping for that point
+  latitude      Float
+  longitude     Float
+  locationLabel String? // e.g. "Salisbury, NC"
+  timezone      String  @default("America/New_York") // from NWS point lookup
+  gridId        String? // NWS forecast office, e.g. "GSP"
+  gridX         Int?
+  gridY         Int?
+
+  // Go / no-go thresholds (thunderstorms are always a no-go, not configurable)
+  maxWindMph   Float @default(14)
+  maxGustMph   Float @default(18)
+  maxPrecipPct Float @default(20)   // max chance of precipitation, %
+  maxCloudPct  Float @default(60)   // max sky cover, %
+  minCeilingFt Float @default(4000) // min cloud-ceiling height, feet
+  minTempF     Float @default(35)
+  maxTempF     Float @default(100)
+
+  // Daily email notification prefs
+  notifyEnabled    Boolean @default(true)
+  notifyHour       Int     @default(7)  // local hour (0-23) to send the daily email
+  lastNotifiedDate String? // local "YYYY-MM-DD" of the last daily email, prevents dupes
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("skydive_users")
+}
+
 model ThemeSettings {
   id        String     @id @default(cuid())
 

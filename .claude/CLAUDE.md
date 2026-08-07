@@ -75,5 +75,8 @@ Internal package name is still `handyman-quote-generator` (v0.2.0).
 - **Log before you close:** a session is done when its work is committed/deployed AND appended to `session_log.md` (template at the bottom of that file). A logged session is safe to delete.
 - If a task needed context that wasn't in `CLAUDE.md`/`session_log.md`, that's a doc bug — add it here as part of the task.
 
+## Skydive Weather micro-site (added 2026-08-06)
+A second brand served by this same app at **skydive-weather.thehearthhollow.com** via a host rewrite in root `middleware.ts` (subdomain paths → `app/skydive/*`; also reachable at `/skydive` on the main domain). Users sign up (email + US location), get a passwordless magic-link dashboard, set personal go/no-go weather limits, and receive a daily Resend email. Weather data: official NWS API (`api.weather.gov`) point→gridpoint hourly layers (wind, gusts, sky cover, ceiling, precip, thunder). Key pieces: `lib/skydive/{nws,evaluate,email,auth,site}.ts`, `app/skydive/*`, `app/api/skydive/{signup,me,settings,forecast,unsubscribe}`, hourly cron `app/api/cron/skydive-notify?secret=CRON_SECRET` (cron-job.org, same as email-replies poller), Prisma model `SkydiveUser` (`skydive_users`). Full setup/ops: `SKYDIVE_WEATHER_SETUP.md`. Needs one-time infra: Cloudflare DNS + tunnel hostname for the subdomain, the hourly cron job, and `prisma db push`.
+
 ## Reference docs in repo
 `PROJECT_CONTEXT_BRIEF.md` (architecture + security-audit history), `PLAYBOOK.md`, `DEPLOYMENT.md`, `RETELL_VOICE_QUOTE_SETUP.md`, and this `.claude/` folder.
