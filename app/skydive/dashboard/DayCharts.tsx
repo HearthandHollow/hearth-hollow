@@ -143,15 +143,15 @@ function HourChart({
   const downPos = useRef<{ x: number; y: number; type: string } | null>(null);
 
   function handleMove(e: React.PointerEvent<SVGSVGElement>) {
-    // Compact charts: only mouse hover tracks the crosshair — a finger drag
-    // would fight page scrolling, and a tap is reserved for expanding.
-    if (!expanded && e.pointerType !== "mouse") return;
+    // Crosshair "slider" works with mouse and touch alike. Compact charts use
+    // touch-action: pan-y, so horizontal finger drags reach us while vertical
+    // swipes still scroll the page; expansion is the Zoom button's job.
     onHover(idxFromEvent(e));
   }
 
   function handleDown(e: React.PointerEvent<SVGSVGElement>) {
     downPos.current = { x: e.clientX, y: e.clientY, type: e.pointerType };
-    if (expanded) onHover(idxFromEvent(e));
+    onHover(idxFromEvent(e));
   }
 
   function handleClick(e: React.MouseEvent<SVGSVGElement>) {
@@ -198,7 +198,7 @@ function HourChart({
       <div className="relative mt-1">
         <svg
           viewBox={`0 0 ${W} ${H}`}
-          className={`w-full select-none ${expanded ? "touch-none" : ""}`}
+          className={`w-full select-none ${expanded ? "touch-none" : "touch-pan-y"}`}
           onPointerMove={handleMove}
           onPointerDown={handleDown}
           onClick={handleClick}
@@ -514,9 +514,9 @@ export default function DayCharts({
         />
       ))}
       <p className="text-xs text-slate-500">
-        Red-shaded hours fall outside your limits (dashed lines). Use ⛶ Zoom to
-        open a chart full-screen with every hour labeled — the full numbers are
-        also in the table below.
+        Red-shaded hours fall outside your limits (dashed lines). Drag sideways
+        across a chart to read exact hourly values; ⛶ Zoom opens it full-screen
+        with every hour labeled. The full numbers are also in the table below.
       </p>
       {expanded && (
         <FullscreenChart

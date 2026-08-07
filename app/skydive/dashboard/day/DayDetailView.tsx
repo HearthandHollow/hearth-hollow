@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import DayCharts from "../DayCharts";
+import SkydiverScene from "../SkydiverScene";
 import { DaySummary, HourVerdict, Params, RATING_UI, fmt, fmtHour } from "../types";
 import { factFor } from "./facts";
 import { sunTimes } from "./suntimes";
@@ -96,11 +97,21 @@ export default function DayDetailView({
             {locationLabel || "Your area"} · daylight window 8am–7pm
           </p>
         </div>
-        <div className={`rounded-xl px-6 py-4 text-center ${ui.cls}`}>
-          <p className="text-xl font-black text-white">{ui.label}</p>
-          <p className="text-xs font-semibold text-white/80">
-            {day.safeHours} of {day.totalHours} hours in your limits
-          </p>
+        <div className="flex items-center gap-3">
+          <div className={`rounded-xl px-6 py-4 text-center ${ui.cls}`}>
+            <p className="text-xl font-black text-white">{ui.label}</p>
+            <p className="text-xs font-semibold text-white/80">
+              {day.safeHours} of {day.totalHours} hours in your limits
+            </p>
+          </div>
+          <SkydiverScene
+            windMph={peakWind}
+            cloudPct={maxCloud}
+            precipPct={maxPrecip}
+            thunder={anyThunder}
+            rating={day.rating}
+            label="This day's conditions"
+          />
         </div>
       </header>
 
