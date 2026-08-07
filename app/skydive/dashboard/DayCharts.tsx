@@ -136,9 +136,11 @@ function HourChart({
     return Math.max(0, Math.min(hours.length - 1, i));
   }
 
-  // Where the touch/press started — used to tell a genuine tap from a scroll
-  // that merely began on the chart.
-  const downPos = useRef<{ x: number; y: number } | null>(null);
+  // Where the touch/press started and what kind of pointer it was. Touch
+  // scrolling proved too easy to mistake for a tap on some browsers, so
+  // chart-body expansion is MOUSE-ONLY — touch users expand via the explicit
+  // Zoom button in the header row.
+  const downPos = useRef<{ x: number; y: number; type: string } | null>(null);
 
   function handleMove(e: React.PointerEvent<SVGSVGElement>) {
     // Compact charts: only mouse hover tracks the crosshair — a finger drag
@@ -148,16 +150,17 @@ function HourChart({
   }
 
   function handleDown(e: React.PointerEvent<SVGSVGElement>) {
-    downPos.current = { x: e.clientX, y: e.clientY };
+    downPos.current = { x: e.clientX, y: e.clientY, type: e.pointerType };
     if (expanded) onHover(idxFromEvent(e));
   }
 
   function handleClick(e: React.MouseEvent<SVGSVGElement>) {
-    // Expand only on a completed tap/click. Browsers already suppress click
-    // when a touch becomes a scroll; the distance guard catches the rest.
+    // Chart-body click expands for MOUSE only; a finger on the chart is
+    // always treated as scrolling. Touch expands via the Zoom button.
     if (expanded || !onExpand) return;
     const d = downPos.current;
-    if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 12) return;
+    if (!d || d.type !== "mouse") return;
+    if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 12) return;
     onExpand();
   }
 
@@ -182,8 +185,14 @@ function HourChart({
             ))}
           </div>
         )}
-        {!expanded && (
-          <span className="ml-auto text-xs text-sky-400">⛶ tap to zoom</span>
+        {!expanded && onExpand && (
+          <button
+            onClick={onExpand}
+            aria-label={`Zoom ${spec.title} chart full-screen`}
+            className="ml-auto rounded-md border border-sky-800 px-3 py-1 text-xs font-semibold text-sky-300 hover:border-sky-500"
+          >
+            ⛶ Zoom
+          </button>
         )}
       </div>
       <div className="relative mt-1">
@@ -505,8 +514,8 @@ export default function DayCharts({
         />
       ))}
       <p className="text-xs text-slate-500">
-        Red-shaded hours fall outside your limits (dashed lines). Tap any chart
-        to zoom it full-screen with every hour labeled — the full numbers are
+        Red-shaded hours fall outside your limits (dashed lines). Use ⛶ Zoom to
+        open a chart full-screen with every hour labeled — the full numbers are
         also in the table below.
       </p>
       {expanded && (
