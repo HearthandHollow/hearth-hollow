@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * Small-multiple hourly charts for one selected day: wind/gusts, cloud/precip,
@@ -97,7 +97,7 @@ function HourChart({
 }) {
   const H = expanded ? 300 : 170;
   const M = expanded
-    ? { l: 44, r: 10, t: 14, b: 30 }
+    ? { l: 44, r: 26, t: 14, b: 30 }
     : { l: 40, r: 8, t: 10, b: 22 };
   const fs = expanded ? 13 : 10;
 
@@ -325,16 +325,22 @@ function FullscreenChart({
   onClose: () => void;
 }) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
+  // Fit the chart to the screen: use whichever of width/height binds, so the
+  // whole chart (and the Close button) is always visible with no scrolling —
+  // portrait letterboxes horizontally-bound, landscape height-bound.
+  const [fitWidth, setFitWidth] = useState<number | null>(null);
 
   useEffect(() => {
-    const el = ref.current;
-    // Best-effort real fullscreen + landscape (Android Chrome); the fixed
-    // overlay is the fallback everywhere else (e.g. iOS Safari).
-    el?.requestFullscreen?.().then(
-      () => (screen.orientation as any)?.lock?.("landscape").catch(() => {}),
-      () => {}
-    );
+    const ASPECT = 600 / 300; // expanded chart viewBox W/H
+    const CHROME = 120; // header row + chart title row + padding
+    const compute = () => {
+      const vw = (window.visualViewport?.width ?? window.innerWidth) - 24;
+      const vh = (window.visualViewport?.height ?? window.innerHeight) - CHROME;
+      setFitWidth(Math.max(280, Math.min(vw, vh * ASPECT)));
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    window.visualViewport?.addEventListener("resize", compute);
     const onFsChange = () => {
       if (!document.fullscreenElement) onClose();
     };
@@ -344,6 +350,8 @@ function FullscreenChart({
     document.addEventListener("fullscreenchange", onFsChange);
     document.addEventListener("keydown", onKey);
     return () => {
+      window.removeEventListener("resize", compute);
+      window.visualViewport?.removeEventListener("resize", compute);
       document.removeEventListener("fullscreenchange", onFsChange);
       document.removeEventListener("keydown", onKey);
       (screen.orientation as any)?.unlock?.();
@@ -354,32 +362,29 @@ function FullscreenChart({
 
   return (
     <div
-      ref={ref}
-      className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-slate-950 p-4"
+      className="fixed inset-0 z-50 flex flex-col bg-slate-950 p-3"
+      style={{ height: "100dvh" }}
     >
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-slate-400">
-          Drag across the chart for exact hourly values
-        </p>
+      <div className="flex shrink-0 items-center justify-between gap-3">
+        <p className="text-xs text-slate-400">Drag for exact hourly values</p>
         <button
           onClick={onClose}
           aria-label="Close full-screen chart"
-          className="rounded-lg border border-slate-600 px-4 py-2 font-semibold text-slate-200 hover:border-sky-500"
+          className="rounded-lg border border-slate-600 px-4 py-1.5 font-semibold text-slate-200 hover:border-sky-500"
         >
           ✕ Close
         </button>
       </div>
-      <div className="my-auto py-4">
-        <HourChart
-          spec={spec}
-          hours={hours}
-          expanded
-          hoverIdx={hoverIdx}
-          onHover={setHoverIdx}
-        />
-        <p className="mt-3 text-center text-xs text-slate-500 portrait:block landscape:hidden">
-          Rotate your phone for an even bigger view
-        </p>
+      <div className="flex min-h-0 flex-1 items-center justify-center">
+        <div style={{ width: fitWidth ?? "100%" }}>
+          <HourChart
+            spec={spec}
+            hours={hours}
+            expanded
+            hoverIdx={hoverIdx}
+            onHover={setHoverIdx}
+          />
+        </div>
       </div>
     </div>
   );
@@ -464,6 +469,17 @@ export default function DayCharts({
 
   const expanded = charts.find((c) => c.key === expandedKey);
 
+  function openFullscreen(key: string) {
+    setExpandedKey(key);
+    // Request real fullscreen synchronously with the tap so the browser still
+    // sees the user activation (a deferred request often gets denied). The
+    // fixed overlay is the fallback wherever this is unsupported (iOS).
+    document.documentElement.requestFullscreen?.().then(
+      () => (screen.orientation as any)?.lock?.("landscape").catch(() => {}),
+      () => {}
+    );
+  }
+
   return (
     <div className="space-y-6">
       {charts.map((spec) => (
@@ -474,7 +490,7 @@ export default function DayCharts({
           expanded={false}
           hoverIdx={hoverIdx}
           onHover={setHoverIdx}
-          onExpand={() => setExpandedKey(spec.key)}
+          onExpand={() => openFullscreen(spec.key)}
         />
       ))}
       <p className="text-xs text-slate-500">
