@@ -1,79 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { skydivePath } from "../paths";
-import DayCharts from "./DayCharts";
-
-// --- API response shapes (mirror /api/skydive/me and /forecast) -------------
-
-interface Params {
-  maxWindMph: number;
-  maxGustMph: number;
-  maxPrecipPct: number;
-  maxCloudPct: number;
-  minCeilingFt: number;
-  minTempF: number;
-  maxTempF: number;
-}
-
-interface Me {
-  id: string;
-  email: string;
-  name: string | null;
-  locationLabel: string | null;
-  timezone: string;
-  params: Params;
-  notifyEnabled: boolean;
-  notifyHour: number;
-}
-
-interface HourVerdict {
-  time: number;
-  tempF: number | null;
-  windMph: number | null;
-  gustMph: number | null;
-  cloudPct: number | null;
-  precipPct: number | null;
-  ceilingFt: number | null;
-  thunder: boolean;
-  safe: boolean;
-  reasons: string[];
-  localHour: number;
-  dateKey: string;
-}
-
-interface DaySummary {
-  dateKey: string;
-  label: string;
-  rating: "GOOD" | "LIMITED" | "NO_GO";
-  safeHours: number;
-  totalHours: number;
-  safeHourList: number[];
-  topReasons: string[];
-}
-
-interface Forecast {
-  locationLabel: string | null;
-  timezone: string;
-  hours: HourVerdict[];
-  days: DaySummary[];
-}
-
-const RATING_UI = {
-  GOOD: { label: "GOOD TO JUMP", cls: "bg-emerald-600", ring: "border-emerald-500" },
-  LIMITED: { label: "LIMITED WINDOWS", cls: "bg-amber-600", ring: "border-amber-500" },
-  NO_GO: { label: "NO-GO", cls: "bg-red-600", ring: "border-red-500" },
-} as const;
-
-function fmtHour(h: number): string {
-  const ampm = h >= 12 ? "pm" : "am";
-  const twelve = h % 12 === 0 ? 12 : h % 12;
-  return `${twelve}${ampm}`;
-}
-
-const fmt = (v: number | null, suffix = "") =>
-  v == null ? "—" : `${Math.round(v)}${suffix}`;
+import {
+  Params,
+  Me,
+  DaySummary,
+  Forecast,
+  RATING_UI,
+  fmtHour,
+  fmt,
+} from "./types";
 
 // Threshold inputs hold raw text while editing (so the field can be emptied
 // mid-typing — coercing to Number onChange re-renders "" as 0, leaving a
@@ -109,7 +47,7 @@ export default function DashboardClient() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const router = useRouter();
 
   const [draft, setDraft] = useState<DraftParams | null>(null);
   const [notifyEnabled, setNotifyEnabled] = useState(true);
@@ -122,12 +60,6 @@ export default function DashboardClient() {
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error || "Couldn't load forecast");
     setForecast(data);
-    // Keep the selected day if it still exists, else default to the first day.
-    setSelectedDay((cur) =>
-      cur && data.days?.some((d: DaySummary) => d.dateKey === cur)
-        ? cur
-        : data.days?.[0]?.dateKey ?? null
-    );
   }, [auth]);
 
   async function refresh() {
@@ -283,15 +215,15 @@ export default function DashboardClient() {
       <section className="mt-8 grid gap-4 sm:grid-cols-3">
         {(forecast?.days || []).slice(0, 3).map((day) => {
           const ui = RATING_UI[day.rating];
-          const selected = day.dateKey === selectedDay;
           return (
             <button
               key={day.dateKey}
-              onClick={() => setSelectedDay(day.dateKey)}
-              aria-pressed={selected}
-              className={`rounded-xl border bg-slate-900/70 p-4 text-left transition hover:bg-slate-800/80 ${ui.ring} ${
-                selected ? "ring-2 ring-sky-400" : ""
-              }`}
+              onClick={() =>
+                router.push(
+                  skydivePath(`/dashboard/day?d=${day.dateKey}&${auth}`)
+                )
+              }
+              className={`rounded-xl border bg-slate-900/70 p-4 text-left transition hover:bg-slate-800/80 ${ui.ring}`}
             >
               <div
                 className={`inline-block rounded-full px-3 py-1 text-xs font-bold text-white ${ui.cls}`}
@@ -309,8 +241,8 @@ export default function DashboardClient() {
                     ? `Blockers: ${day.topReasons.join(", ")}`
                     : "Outside forecast range"}
               </p>
-              <p className={`mt-2 text-xs ${selected ? "text-sky-300" : "text-slate-500"}`}>
-                {selected ? "▾ showing graphs below" : "Tap to view graphs"}
+              <p className="mt-2 text-xs text-sky-400">
+                Graphs, stats &amp; details →
               </p>
             </button>
           );
@@ -321,26 +253,6 @@ export default function DashboardClient() {
           </p>
         )}
       </section>
-
-      {/* Selected-day graphs */}
-      {me &&
-        selectedDay &&
-        (() => {
-          const day = forecast?.days.find((d) => d.dateKey === selectedDay);
-          if (!day) return null;
-          const chartHours = daylight.filter((h) => h.dateKey === selectedDay);
-          return (
-            <section className="mt-10 rounded-2xl border border-slate-800 bg-slate-900 p-5">
-              <h2 className="text-lg font-bold">{day.label} — graphs</h2>
-              <p className="mt-1 text-sm text-slate-400">
-                Daylight hours vs your limits · pick another day above
-              </p>
-              <div className="mt-5">
-                <DayCharts hours={chartHours} limits={me.params} />
-              </div>
-            </section>
-          );
-        })()}
 
       {/* Hour-by-hour */}
       <section className="mt-10">
