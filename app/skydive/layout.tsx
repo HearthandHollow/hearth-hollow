@@ -14,7 +14,7 @@ export default function SkydiveLayout({
   // Standalone dark "sky" look for the micro-site — deliberately not using the
   // Hearth & Hollow theme tokens, since this brand lives on its own subdomain.
   return (
-    <div className="min-h-screen bg-gradient-to-b from-sky-950 via-slate-950 to-slate-950 text-slate-100">
+    <div className="skydive-root min-h-screen bg-gradient-to-b from-sky-950 via-slate-950 to-slate-950 text-slate-100">
       {children}
     </div>
   );
