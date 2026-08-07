@@ -12,6 +12,7 @@ import {
   fmtHour,
   fmt,
 } from "./types";
+import SkydiverScene from "./SkydiverScene";
 
 // Threshold inputs hold raw text while editing (so the field can be emptied
 // mid-typing — coercing to Number onChange re-renders "" as 0, leaving a
@@ -201,6 +202,16 @@ export default function DashboardClient() {
               </p>
               <p className="text-xl font-black text-white">{todayUi.label}</p>
             </div>
+          )}
+          {today && forecast?.hours?.[0] && (
+            <SkydiverScene
+              windMph={forecast.hours[0].windMph}
+              cloudPct={forecast.hours[0].cloudPct}
+              precipPct={forecast.hours[0].precipPct}
+              thunder={forecast.hours[0].thunder}
+              rating={today.rating}
+              label="Current conditions"
+            />
           )}
         </div>
       </header>
