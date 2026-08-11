@@ -1,0 +1,11 @@
+# /opt/stacks/hearth-agent/litellm-config.yaml
+# Map the "hearth-llm" model name to whatever Ollama serves.
+# Swap the ollama model tag for the current Hearth base model.
+model_list:
+  - model_name: hearth-llm
+    litellm_params:
+      model: ollama_chat/hearth-llm            # e.g. ollama_chat/qwen3:30b behind the Hearth Modelfile
+      api_base: http://host.docker.internal:11434
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "<fine-grained PAT from Infisical>"
+      }
+    },
+    "zapier": {
+      "type": "http",
+      "url": "<your per-account URL from mcp.zapier.com>"
+    },
+    "obsidian": {
+      "command": "npx",
+      "args": ["-y", "mcp-obsidian", "<path-to-vault-on-NAS>"]
+    }
+  }
+}

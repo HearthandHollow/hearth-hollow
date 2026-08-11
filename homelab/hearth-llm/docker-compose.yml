@@ -1,0 +1,25 @@
+# /opt/stacks/hearth-agent/docker-compose.yml  (cortex)
+# LiteLLM proxy exposing the Anthropic /v1/messages format in front of Ollama.
+# Assumes Ollama already runs on cortex (host network, :11434).
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    container_name: hearth-litellm
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./litellm-config.yaml:/app/config.yaml:ro
+    environment:
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Optional: self-hosted web search for the agent (uncomment to enable).
+  # searxng:
+  #   image: searxng/searxng:latest
+  #   container_name: hearth-searxng
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8888:8080"
