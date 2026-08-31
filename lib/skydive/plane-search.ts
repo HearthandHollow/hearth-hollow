@@ -57,6 +57,8 @@ export interface PlaneOption {
   history: string;
   /** Direct photo URL from the listing, when the model found one. */
   imageUrl: string;
+  /** True when url was replaced with a marketplace search (dead/untrusted link). */
+  linkIsSearch?: boolean;
   importCost: {
     applicable: boolean;
     breakdown: string;
@@ -240,6 +242,59 @@ async function attempt(
   };
 }
 
+// --- Listing-link verification ----------------------------------------------
+// Models sometimes emit stale or fabricated listing URLs (especially if the
+// web-search tool didn't actually run). Verify each URL server-side and swap
+// dead/untrusted ones for a live marketplace search for that aircraft.
+
+const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
+
+function marketplaceSearchUrl(o: PlaneOption): string {
+  const model = o.name.replace(/^(19|20)\d{2}\s*/, "").trim();
+  const q = encodeURIComponent(model);
+  const s = (o.source || "").toLowerCase();
+  if (s.includes("trade"))
+    return `https://www.trade-a-plane.com/search?s-type=aircraft&keyword=${q}`;
+  if (s.includes("controller"))
+    return `https://www.controller.com/listings/search?keywords=${q}`;
+  return `https://www.google.com/search?q=${encodeURIComponent(
+    `"${model}" for sale ${o.source || ""}`.trim()
+  )}`;
+}
+
+async function verifyOptionLinks(
+  options: PlaneOption[],
+  searchesRun: number
+): Promise<void> {
+  await Promise.all(
+    options.map(async (o) => {
+      const downgrade = () => {
+        o.url = marketplaceSearchUrl(o);
+        o.linkIsSearch = true;
+      };
+      // No live search ran -> the model can't have actually seen this URL.
+      if (!o.url || searchesRun === 0) return downgrade();
+      try {
+        const res = await fetch(o.url, {
+          redirect: "follow",
+          headers: { "User-Agent": BROWSER_UA },
+          signal: AbortSignal.timeout(10000),
+        });
+        if (res.status === 404 || res.status === 410) return downgrade();
+        // Barnstormers serves its not-found page with a 200.
+        if (res.ok && /barnstormers\.com/i.test(o.url)) {
+          const body = await res.text();
+          if (/can't seem to find the page/i.test(body)) return downgrade();
+        }
+        // 403/405/429 are bot-blocks, not dead links — keep the URL.
+      } catch {
+        return downgrade(); // unreachable host / timeout
+      }
+    })
+  );
+}
+
 export async function searchPlanes(
   input: PlaneSearchInput
 ): Promise<PlaneSearchResult> {
@@ -249,7 +304,12 @@ export async function searchPlanes(
     for (const toolType of webSearchVariants(model)) {
       try {
         const result = await attempt(input, model, toolType);
-        console.log(`Plane search succeeded with model=${model} tool=${toolType}`);
+        console.log(
+          `Plane search succeeded with model=${model} tool=${toolType} searches=${result.searchesRun}`
+        );
+        if (result.options.length) {
+          await verifyOptionLinks(result.options, result.searchesRun ?? 0);
+        }
         return result;
       } catch (error: any) {
         lastError = error;
