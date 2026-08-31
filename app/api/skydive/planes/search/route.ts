@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.SKYDIVE_ANTHROPIC_API_KEY && !process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
       { error: "Plane search isn't configured on this server." },
       { status: 503 }

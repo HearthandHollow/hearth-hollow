@@ -11,7 +11,17 @@ import Anthropic from "@anthropic-ai/sdk";
  * API route in front of this rate-limits per user and per IP.
  */
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// Web search must run on the real Anthropic API: the default deployment
+// routes ANTHROPIC_API_KEY through a local proxy (LiteLLM) that silently
+// drops server-side tools — confirmed by live searches reporting 0 web
+// searches. SKYDIVE_ANTHROPIC_API_KEY is a direct Anthropic key that
+// bypasses the proxy (and any ANTHROPIC_BASE_URL override) for this feature.
+const DIRECT_KEY = process.env.SKYDIVE_ANTHROPIC_API_KEY;
+const client = new Anthropic(
+  DIRECT_KEY
+    ? { apiKey: DIRECT_KEY, baseURL: "https://api.anthropic.com" }
+    : { apiKey: process.env.ANTHROPIC_API_KEY }
+);
 
 // This deployment routes Anthropic calls through a proxy (LiteLLM) whose
 // model list is limited, so we try candidates in order and fall back when a
