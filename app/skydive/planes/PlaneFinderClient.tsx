@@ -14,6 +14,7 @@ interface PlaneOption {
   details: string;
   history: string;
   imageUrl?: string;
+  linkIsSearch?: boolean;
   importCost: { applicable: boolean; breakdown: string; estimatedTotal: string } | null;
 }
 
@@ -360,7 +361,9 @@ export default function PlaneFinderClient() {
                         rel="noopener noreferrer"
                         className="mt-4 inline-block rounded-lg border border-sky-700 px-4 py-2 text-center text-sm font-semibold text-sky-300 hover:border-sky-500"
                       >
-                        View listing ↗
+                        {o.linkIsSearch
+                          ? `Find it on ${o.source || "the marketplace"} ↗`
+                          : "View listing ↗"}
                       </a>
                     )}
                   </div>
