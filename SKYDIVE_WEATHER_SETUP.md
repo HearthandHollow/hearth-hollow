@@ -48,6 +48,13 @@ email via Resend.
    timezones and all users' preferred times.
 4. **Env vars:** nothing new required. Uses existing `RESEND_API_KEY`,
    `RESEND_FROM_EMAIL`, `SESSION_SECRET`, `CRON_SECRET`, `DATABASE_URL`.
+   Plane Finder: `SKYDIVE_ANTHROPIC_API_KEY` — a DIRECT Anthropic API key.
+   Required for real web-search research: the deployment's default
+   `ANTHROPIC_API_KEY` routes through a LiteLLM proxy that drops Anthropic
+   server-side tools (searches silently become model guesses). When set, only
+   the plane search bypasses the proxy; all other AI features stay on the
+   existing key. Optional: `SKYDIVE_PLANE_SEARCH_MODEL` (default
+   `claude-opus-5`).
    Optional override: `SKYDIVE_SITE_URL` (defaults to
    `https://skydive-weather.thehearthhollow.com` in production, and to
    `http://localhost:3001/skydive` when `NEXT_PUBLIC_SITE_URL` is unset).
