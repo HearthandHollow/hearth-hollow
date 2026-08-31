@@ -13,6 +13,7 @@ interface PlaneOption {
   source: string;
   details: string;
   history: string;
+  imageUrl?: string;
   importCost: { applicable: boolean; breakdown: string; estimatedTotal: string } | null;
 }
 
@@ -22,6 +23,60 @@ interface SearchResult {
   sites: { name: string; url: string; bestFor: string }[];
   cautions: string;
   raw?: string;
+  searchesRun?: number;
+  modelUsed?: string;
+}
+
+// Representative type photos (Wikimedia Commons, verified) shown when the
+// listing itself didn't yield a usable image.
+const TYPE_PHOTOS: [RegExp, string][] = [
+  [/208|caravan/i, "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Iraqi_Air_Force_Cessna_208_Caravan_training_mission.jpg/960px-Iraqi_Air_Force_Cessna_208_Caravan_training_mission.jpg"],
+  [/206|stationair/i, "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Cessna.206h.stationair2.arp.jpg/960px-Cessna.206h.stationair2.arp.jpg"],
+  [/182|skylane|skywagon/i, "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Cessna182t_skylane_n2231f_cotswoldairshow_2010_arp.jpg/960px-Cessna182t_skylane_n2231f_cotswoldairshow_2010_arp.jpg"],
+  [/750|pac\b|xstol/i, "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/PACP-750XSTOL2.jpg/960px-PACP-750XSTOL2.jpg"],
+  [/kodiak|quest/i, "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Quest_Kodiak_100_AN2150438.jpg/960px-Quest_Kodiak_100_AN2150438.jpg"],
+  [/twin otter|dhc-?6/i, "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/WinAir_De_Havilland_Canada_DHC-6-300_Twin_Otter_Breidenstein.jpg/960px-WinAir_De_Havilland_Canada_DHC-6-300_Twin_Otter_Breidenstein.jpg"],
+  [/skyvan|short sc/i, "https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Short_Skyvan_SC.7_%28G-BEOL%29_arrives_at_RIAT_Fairford_12July2018_arp.jpg/960px-Short_Skyvan_SC.7_%28G-BEOL%29_arrives_at_RIAT_Fairford_12July2018_arp.jpg"],
+  [/king air|beech/i, "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Tc-90_04l.jpg/960px-Tc-90_04l.jpg"],
+  [/dornier|228/i, "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Do228NG_-_RIAT_2012_%2818649688613%29.jpg/960px-Do228NG_-_RIAT_2012_%2818649688613%29.jpg"],
+  [/pc-?6|porter|pilatus/i, "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Pilatus_PC-6_SkydiveLillo_JD18032008_%28cropped%29.jpg/960px-Pilatus_PC-6_SkydiveLillo_JD18032008_%28cropped%29.jpg"],
+];
+
+function typePhotoFor(name: string): string | null {
+  for (const [re, url] of TYPE_PHOTOS) if (re.test(name)) return url;
+  return null;
+}
+
+/** Listing photo when available; representative type photo otherwise; hides on load failure. */
+function PlanePhoto({ option }: { option: PlaneOption }) {
+  const typePhoto = typePhotoFor(option.name);
+  const [src, setSrc] = useState<string | null>(option.imageUrl || typePhoto);
+  const [isListing, setIsListing] = useState(!!option.imageUrl);
+  if (!src) return null;
+  return (
+    <div className="relative -mx-5 -mt-5 mb-4 h-40 overflow-hidden rounded-t-2xl bg-slate-800">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={option.name}
+        className="h-full w-full object-cover"
+        loading="lazy"
+        onError={() => {
+          if (isListing && typePhoto) {
+            setIsListing(false);
+            setSrc(typePhoto);
+          } else {
+            setSrc(null);
+          }
+        }}
+      />
+      {!isListing && (
+        <span className="absolute bottom-1.5 right-2 rounded bg-slate-950/70 px-1.5 py-0.5 text-[10px] text-slate-300">
+          representative photo — not the actual aircraft
+        </span>
+      )}
+    </div>
+  );
 }
 
 const PROGRESS_LINES = [
@@ -253,6 +308,13 @@ export default function PlaneFinderClient() {
       {/* Results */}
       {result && (
         <div ref={resultsRef} className="mt-10 space-y-8">
+          {result.searchesRun === 0 && (
+            <p className="rounded-lg border border-red-800 bg-red-950/50 p-4 text-sm text-red-300">
+              ⚠ Live web search didn&apos;t run for this result — anything below
+              is unverified model knowledge, not researched listings. Treat
+              URLs and prices as examples only.
+            </p>
+          )}
           {result.summary && (
             <section className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
               <h2 className="text-lg font-bold">Market overview</h2>
@@ -265,7 +327,8 @@ export default function PlaneFinderClient() {
               <h2 className="text-lg font-bold">Your options</h2>
               <div className="mt-4 grid gap-5 lg:grid-cols-2">
                 {result.options.map((o, i) => (
-                  <div key={i} className="flex flex-col rounded-2xl border border-slate-700 bg-slate-900 p-5">
+                  <div key={i} className="flex flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 p-5">
+                    <PlanePhoto option={o} />
                     <div className="flex items-start justify-between gap-3">
                       <h3 className="text-base font-bold text-sky-300">{o.name}</h3>
                       <span className="whitespace-nowrap rounded-full bg-emerald-900/60 px-3 py-1 text-sm font-bold text-emerald-300">
@@ -346,6 +409,10 @@ export default function PlaneFinderClient() {
             and can be wrong or stale — always verify with the seller and get an
             independent pre-buy inspection. Import estimates are planning
             figures, not quotes.
+            {result.modelUsed &&
+              ` Researched with ${result.modelUsed}${
+                result.searchesRun != null ? ` · ${result.searchesRun} web searches` : ""
+              }.`}
           </p>
         </div>
       )}

@@ -55,6 +55,8 @@ export interface PlaneOption {
   source: string;
   details: string;
   history: string;
+  /** Direct photo URL from the listing, when the model found one. */
+  imageUrl: string;
   importCost: {
     applicable: boolean;
     breakdown: string;
@@ -69,6 +71,9 @@ export interface PlaneSearchResult {
   cautions: string;
   /** Raw model text, kept as a fallback when JSON parsing fails. */
   raw?: string;
+  /** How many live web searches actually ran — 0 means unresearched output. */
+  searchesRun?: number;
+  modelUsed?: string;
 }
 
 const SYSTEM_PROMPT = `You are an aircraft-acquisition researcher helping skydivers and dropzone operators find jump planes. You research CURRENT, REAL listings using web search — never invent listings.
@@ -99,6 +104,7 @@ Output rules:
       "source": "Controller",
       "details": "TTAF, engine times, jump config (door/steps), useful load, why it fits",
       "history": "what you found: times, incidents, listing age — or 'No history found'",
+      "imageUrl": "direct https URL of a photo of THIS aircraft from the listing page if you saw one, else \\"\\"",
       "importCost": null
     }
   ],
@@ -106,7 +112,8 @@ Output rules:
   "cautions": "honest caveats: pre-buy inspection, jump-door STC, Part 91 vs 119, anything you could not verify"
 }
 - "importCost" is null for US-located aircraft; for overseas aircraft use {"applicable": true, "breakdown": "itemized estimate", "estimatedTotal": "$X-Y"}.
-- No text after the closing fence.`;
+- No text after the closing fence.
+- If your web search tool is unavailable, fails, or returns nothing usable: return an empty "options" array and explain in "cautions" — NEVER output example, placeholder, or remembered listings or URLs as if they were real.`;
 
 function buildUserPrompt(input: PlaneSearchInput): string {
   return `Find jump planes matching these guidelines:
@@ -120,13 +127,30 @@ ${input.notes ? `- Additional guidelines: ${input.notes}` : ""}
 Today's date context matters — find listings that are current, and note if a listing looks stale.`;
 }
 
-/** Pull the last ```json fence out of the model's reply. */
-function extractJson(text: string): PlaneSearchResult | null {
+/**
+ * Pull the result JSON out of the model's reply: prefer the last ```json
+ * fence, but fall back to bare JSON (some models skip the fence) by slicing
+ * from the first "{" to the last "}".
+ */
+export function extractJson(text: string): PlaneSearchResult | null {
   const fences = [...text.matchAll(/```json\s*([\s\S]*?)```/g)];
+  const candidates: string[] = [];
   const last = fences[fences.length - 1];
-  if (!last) return null;
+  if (last) candidates.push(last[1]);
+  const open = text.indexOf("{");
+  const close = text.lastIndexOf("}");
+  if (open !== -1 && close > open) candidates.push(text.slice(open, close + 1));
+
+  for (const candidate of candidates) {
+    const parsed = tryParse(candidate);
+    if (parsed) return parsed;
+  }
+  return null;
+}
+
+function tryParse(json: string): PlaneSearchResult | null {
   try {
-    const parsed = JSON.parse(last[1]);
+    const parsed = JSON.parse(json);
     if (!parsed || !Array.isArray(parsed.options)) return null;
     return {
       summary: String(parsed.summary || ""),
@@ -139,6 +163,7 @@ function extractJson(text: string): PlaneSearchResult | null {
         source: String(o?.source || ""),
         details: String(o?.details || ""),
         history: String(o?.history || "No history found"),
+        imageUrl: /^https:\/\//.test(String(o?.imageUrl || "")) ? String(o.imageUrl) : "",
         importCost:
           o?.importCost && o.importCost.applicable
             ? {
@@ -189,13 +214,19 @@ async function attempt(
     throw new Error("The research model declined this search. Try rewording your guidelines.");
   }
 
-  const text = (response.content as any[])
+  const blocks = response.content as any[];
+  const text = blocks
     .filter((b) => b.type === "text")
     .map((b) => b.text)
     .join("\n");
+  // How many live searches actually happened — zero means the "research" is
+  // unverified model output and the UI should say so loudly.
+  const searchesRun = blocks.filter(
+    (b) => b.type === "web_search_tool_result"
+  ).length;
 
   const parsed = extractJson(text);
-  if (parsed) return parsed;
+  if (parsed) return { ...parsed, searchesRun, modelUsed: model };
 
   // Parsing failed — surface the raw research text rather than nothing.
   return {
@@ -204,6 +235,8 @@ async function attempt(
     sites: [],
     cautions: "",
     raw: text.replace(/```json[\s\S]*?```/g, "").trim(),
+    searchesRun,
+    modelUsed: model,
   };
 }
 
