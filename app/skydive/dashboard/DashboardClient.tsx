@@ -187,6 +187,12 @@ export default function DashboardClient() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <a
+            href={skydivePath(`/planes?${auth}`)}
+            className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-300 hover:border-sky-500 hover:text-sky-300"
+          >
+            ✈ Plane Finder
+          </a>
           <button
             onClick={refresh}
             disabled={refreshing}
