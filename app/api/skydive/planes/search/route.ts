@@ -53,14 +53,57 @@ export async function POST(req: NextRequest) {
     notes: clamp(body.notes, 500),
   };
 
-  try {
-    const result = await searchPlanes(input);
-    return NextResponse.json(result);
-  } catch (error: any) {
-    console.error("Plane search failed:", error);
-    return NextResponse.json(
-      { error: error?.message || "The search failed — please try again." },
-      { status: 502 }
-    );
-  }
+  // The research call runs 1-3+ minutes, but Cloudflare kills responses that
+  // send no bytes for ~100s (the client then sees an HTML 524 page instead of
+  // JSON). Stream the response: heartbeat lines keep the connection alive
+  // while the search runs, then the final line carries the result.
+  const encoder = new TextEncoder();
+  let closed = false;
+  const stream = new ReadableStream({
+    start(controller) {
+      const send = (line: string) => {
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(line + "\n"));
+        } catch {
+          closed = true;
+        }
+      };
+      const finish = (line: string) => {
+        clearInterval(ping);
+        send(line);
+        if (!closed) {
+          closed = true;
+          try {
+            controller.close();
+          } catch {}
+        }
+      };
+      const ping = setInterval(() => send("PING"), 8000);
+      send("PING");
+      searchPlanes(input).then(
+        (result) => finish("RESULT " + JSON.stringify(result)),
+        (error: any) => {
+          console.error("Plane search failed:", error);
+          finish(
+            "ERROR " +
+              JSON.stringify({
+                error: error?.message || "The search failed — please try again.",
+              })
+          );
+        }
+      );
+    },
+    cancel() {
+      closed = true;
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no",
+    },
+  });
 }

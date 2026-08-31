@@ -78,9 +78,34 @@ export default function PlaneFinderClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ u, t, intent, budget, capacity, aircraftClass, region, notes }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Search failed");
-      setResult(data);
+      // Fast failures (auth, rate limit) come back as plain JSON errors.
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Search failed");
+      }
+      // Success is a heartbeat stream ("PING" lines while the research runs)
+      // ending in one "RESULT {...}" or "ERROR {...}" line.
+      if (!res.body) throw new Error("Search failed — no response.");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+      }
+      buf += decoder.decode();
+      const lines = buf.split("\n").filter((l) => l.trim() && l.trim() !== "PING");
+      const last = lines[lines.length - 1]?.trim() || "";
+      if (last.startsWith("RESULT ")) {
+        setResult(JSON.parse(last.slice("RESULT ".length)));
+      } else if (last.startsWith("ERROR ")) {
+        throw new Error(
+          JSON.parse(last.slice("ERROR ".length))?.error || "Search failed"
+        );
+      } else {
+        throw new Error("The search connection dropped — please try again.");
+      }
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     } catch (err: any) {
       setError(err?.message || "Search failed — please try again.");
