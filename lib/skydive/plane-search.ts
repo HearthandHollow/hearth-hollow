@@ -13,9 +13,29 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// Overridable so the model (and cost) can be tuned without a code change.
-const MODEL = process.env.SKYDIVE_PLANE_SEARCH_MODEL || "claude-opus-5";
+// This deployment routes Anthropic calls through a proxy (LiteLLM) whose
+// model list is limited, so we try candidates in order and fall back when a
+// model name is rejected. SKYDIVE_PLANE_SEARCH_MODEL pins the first choice.
+const MODEL_CANDIDATES = [
+  process.env.SKYDIVE_PLANE_SEARCH_MODEL,
+  "claude-opus-5",
+  "claude-sonnet-5",
+  "claude-sonnet-4-6",
+  "claude-haiku-4-5-20251001",
+  "claude-haiku-4-5",
+].filter((m, i, arr): m is string => !!m && arr.indexOf(m) === i);
+
 const MAX_SEARCHES = 10;
+
+// Newer models take the dynamic-filtering web-search variant; older ones
+// (haiku, pre-4.6) only accept the basic variant. If the preferred variant is
+// rejected we retry the same model with the basic one.
+function webSearchVariants(model: string): string[] {
+  const modern = /opus-5|opus-4-[678]|sonnet-5|sonnet-4-6|fable-5/.test(model);
+  return modern
+    ? ["web_search_20260209", "web_search_20250305"]
+    : ["web_search_20250305"];
+}
 
 export interface PlaneSearchInput {
   intent: "buy" | "lease";
@@ -142,18 +162,20 @@ function extractJson(text: string): PlaneSearchResult | null {
   }
 }
 
-export async function searchPlanes(
-  input: PlaneSearchInput
+async function attempt(
+  input: PlaneSearchInput,
+  model: string,
+  toolType: string
 ): Promise<PlaneSearchResult> {
   const response = await client.messages.create(
     {
-      model: MODEL,
+      model,
       max_tokens: 16000,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: buildUserPrompt(input) }],
       tools: [
         {
-          type: "web_search_20260209",
+          type: toolType,
           name: "web_search",
           max_uses: MAX_SEARCHES,
         } as any,
@@ -183,4 +205,41 @@ export async function searchPlanes(
     cautions: "",
     raw: text.replace(/```json[\s\S]*?```/g, "").trim(),
   };
+}
+
+export async function searchPlanes(
+  input: PlaneSearchInput
+): Promise<PlaneSearchResult> {
+  let lastError: unknown = null;
+
+  for (const model of MODEL_CANDIDATES) {
+    for (const toolType of webSearchVariants(model)) {
+      try {
+        const result = await attempt(input, model, toolType);
+        console.log(`Plane search succeeded with model=${model} tool=${toolType}`);
+        return result;
+      } catch (error: any) {
+        lastError = error;
+        // 400s from the API/proxy: an unknown model name -> try the next
+        // model; an unsupported tool variant -> try the basic variant.
+        const msg = String(error?.message || "");
+        const isBadRequest =
+          error instanceof Anthropic.BadRequestError || error?.status === 400;
+        if (!isBadRequest) throw error;
+        if (/web_search|tool/i.test(msg)) {
+          console.warn(`Plane search: ${model} rejected tool ${toolType}, trying next variant`);
+          continue;
+        }
+        if (/model/i.test(msg)) {
+          console.warn(`Plane search: model ${model} rejected by API/proxy, trying next`);
+          break;
+        }
+        throw error;
+      }
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("No available model could run the search.");
 }
