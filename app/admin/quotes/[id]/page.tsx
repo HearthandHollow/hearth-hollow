@@ -596,6 +596,34 @@ export default function QuoteDetailPage() {
     }
   };
 
+  const handleCreateDepositInvoice = async () => {
+    const depDollars = quote?.estimate?.depositAmount || 0;
+    if (depDollars <= 0) {
+      setInvoiceError('Set a deposit amount on the estimate first.');
+      return;
+    }
+    const items = [{ description: 'Project Deposit', quantity: 1, unitPrice: depDollars }];
+    setInvoiceLineItems(items);
+    setSavingInvoice(true);
+    setInvoiceError('');
+    setInvoiceSentMsg('');
+    try {
+      const res = await fetch(`/api/admin/quotes/${quoteId}/invoice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lineItems: items, notes: invoiceNotes || 'Deposit invoice' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create deposit invoice');
+      setInvoice(data.invoice);
+      setPdfPreviewUrl(`/api/admin/quotes/${quoteId}/invoice/pdf?t=${Date.now()}`);
+    } catch (err) {
+      setInvoiceError(err instanceof Error ? err.message : 'Failed to create deposit invoice');
+    } finally {
+      setSavingInvoice(false);
+    }
+  };
+
   const addInvoiceRow = () => {
     setInvoiceLineItems((prev) => [...prev, { description: '', quantity: 1, unitPrice: 0 }]);
   };
@@ -1318,7 +1346,7 @@ export default function QuoteDetailPage() {
               {quote.estimate.depositAmount && quote.estimate.depositAmount > 0 && (
                 <div className="bg-orange-50 p-4 rounded-lg mb-4 border-2 border-orange-200">
                   <p className="text-sm font-semibold text-orange-700 mb-1">💳 Deposit Required</p>
-                  <p className="text-2xl font-bold text-orange-700">${(quote.estimate.depositAmount / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <p className="text-2xl font-bold text-orange-700">${quote.estimate.depositAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   <p className="text-xs text-orange-600 mt-2">Customer will receive a payment link after approving the quote</p>
                 </div>
               )}
@@ -1490,13 +1518,25 @@ export default function QuoteDetailPage() {
               Invoice {invoice && <span className="text-sm text-themeMuted font-normal">#{invoice.invoiceNumber} ({invoice.status})</span>}
             </h2>
             {!showInvoiceEditor && (
-              <button
-                onClick={invoice ? handleOpenInvoiceEditor : handleCreateInvoice}
-                disabled={invoiceLoading || savingInvoice}
-                className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent disabled:opacity-50 font-semibold"
-              >
-                {savingInvoice ? 'Creating…' : invoice ? 'Edit Invoice' : 'Create Invoice'}
-              </button>
+              <div className="flex flex-wrap gap-2">
+                {quote?.estimate?.depositAmount && quote.estimate.depositAmount > 0 ? (
+                  <button
+                    onClick={handleCreateDepositInvoice}
+                    disabled={invoiceLoading || savingInvoice}
+                    className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 font-semibold"
+                    title="Create an invoice for the deposit set on the estimate"
+                  >
+                    {savingInvoice ? 'Working…' : 'Create Deposit Invoice'}
+                  </button>
+                ) : null}
+                <button
+                  onClick={invoice ? handleOpenInvoiceEditor : handleCreateInvoice}
+                  disabled={invoiceLoading || savingInvoice}
+                  className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent disabled:opacity-50 font-semibold"
+                >
+                  {savingInvoice ? 'Creating…' : invoice ? 'Edit Invoice' : 'Create Invoice'}
+                </button>
+              </div>
             )}
           </div>
 

@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import Stripe from 'stripe';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { generateInvoicePdf } from '@/lib/invoice-pdf';
 import { sendInvoiceEmail } from '@/lib/email';
+import { getBaseUrl } from '@/lib/site';
 
 export const dynamic = 'force-dynamic';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
 async function isAuthenticated() {
   const cookieStore = await cookies();
@@ -28,7 +32,6 @@ export async function POST(
       where: { projectId: params.id },
       orderBy: { createdAt: 'desc' },
     });
-
     if (!invoice) {
       return NextResponse.json({ error: 'No invoice found for this quote' }, { status: 404 });
     }
@@ -37,9 +40,50 @@ export async function POST(
       where: { id: params.id },
       include: { customer: true },
     });
-
     if (!project || !project.customer?.email) {
       return NextResponse.json({ error: 'Quote or customer email not found' }, { status: 404 });
+    }
+
+    // Create a Stripe checkout link so the customer can pay the invoice online.
+    // Best-effort: if Stripe isn't configured or the call fails, still send the PDF.
+    let payUrl: string | undefined;
+    if (process.env.STRIPE_SECRET_KEY && invoice.status !== 'paid' && invoice.total > 0) {
+      try {
+        const baseUrl = getBaseUrl();
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ['card'],
+          mode: 'payment',
+          line_items: [
+            {
+              price_data: {
+                currency: 'usd',
+                product_data: {
+                  name: `Invoice ${invoice.invoiceNumber}`,
+                  description: `Payment for ${project.category} project`,
+                },
+                unit_amount: Math.round(invoice.total * 100),
+              },
+              quantity: 1,
+            },
+          ],
+          customer_email: project.customer.email,
+          success_url: `${baseUrl}/?invoice=${invoice.invoiceNumber}&paid=1`,
+          cancel_url: `${baseUrl}/`,
+          metadata: {
+            type: 'invoice',
+            invoiceId: invoice.id,
+            projectId: project.id,
+            invoiceNumber: invoice.invoiceNumber,
+          },
+        });
+        payUrl = session.url ?? undefined;
+        await prisma.invoice.update({
+          where: { id: invoice.id },
+          data: { stripeSessionId: session.id },
+        });
+      } catch (e) {
+        console.error('[invoice/send] Stripe checkout creation failed:', e);
+      }
     }
 
     const pdfBuffer = await generateInvoicePdf({
@@ -63,7 +107,8 @@ export async function POST(
       project.id,
       invoice.invoiceNumber,
       invoice.total,
-      pdfBuffer
+      pdfBuffer,
+      payUrl
     );
 
     const updated = await prisma.invoice.update({
@@ -71,7 +116,7 @@ export async function POST(
       data: { status: 'sent', sentAt: new Date() },
     });
 
-    return NextResponse.json({ invoice: updated });
+    return NextResponse.json({ invoice: updated, payUrl: payUrl ?? null });
   } catch (error) {
     console.error('[admin/quotes/invoice/send]', error);
     return NextResponse.json(

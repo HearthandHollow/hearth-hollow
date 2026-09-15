@@ -261,3 +261,17 @@ The site is self-hosted on forge (192.168.10.207) as Docker (in addition to Verc
 ### 2026-08-31 (cont. 2) — Plane Finder: direct Anthropic key path
 - Confirmed live: footer showed "0 web searches" — the LiteLLM proxy (which forge's ANTHROPIC_API_KEY routes through) silently drops Anthropic server-side tools, so plane "research" was model memory with fabricated/dead listing URLs (PR #22 already swaps dead links for marketplace searches).
 - New env var `SKYDIVE_ANTHROPIC_API_KEY` (PR #23): when set, plane search constructs its own client against https://api.anthropic.com directly, bypassing the proxy and any ANTHROPIC_BASE_URL. Everything else (estimates, photo vision, email analysis) stays on the existing key/proxy. Needs a real Anthropic API key in /opt/stacks/hearthhollow/.env.app + app container recreate (runtime env, no rebuild).
+
+### 2026-09-15 — Clients hub (client websites/apps manager) + rescued unpushed invoice-pay work
+- What was requested: an admin page to manage all client websites/apps (urgent care site, farrier site) — live content edits per site, analytics, client profiles, monthly invoices.
+- What changed (files):
+  - New Prisma models `Client` / `ClientSite` / `ClientInvoice` (tables `clients`, `client_sites`, `client_invoices`).
+  - New admin pages `app/admin/clients` (list, add, uptime dots, MRR summary) and `app/admin/clients/[id]` (profile, sites, live-content editor, invoices). Dashboard header gained a 👥 Clients link.
+  - New admin APIs: `admin/clients{,/[id]{,/sites,/invoices}}`, `admin/sites/[id]{,/check}`, `admin/client-invoices/[id]{,/send}` (send = Resend email + best-effort Stripe Checkout pay link, metadata `type: 'client_invoice'`).
+  - Public `GET /api/sites/config?token=<configToken>` (CORS *) — client sites fetch their live-editable config (announcement/phone/email/hours/address + arbitrary JSON); token rotatable from admin.
+  - `GET /api/cron/check-sites?secret=<CRON_SECRET>` — uptime poller for external scheduler (cron-job.org, like check-email-replies); notifies on up→down and recovery via createNotification. Shared checker in `lib/site-check.ts`.
+  - Stripe webhook: new `client_invoice` branch marks ClientInvoice paid + notifies.
+- **Also rescued from the NextCloud mirror (work that was never pushed to GitHub):** quote-invoice online payment — `Invoice.stripeSessionId`/`paidAt` fields, webhook `type: 'invoice'` branch, invoice/send Stripe pay link + `sendInvoiceEmail(payUrl)`, quotes/[id] paid-status UI, and the deposit-checkout cents fix (`depositAmount * 100` — the GitHub version was charging dollars as cents, 100× too little).
+- Migrations run: none locally (no DATABASE_URL here) — `prisma db push` runs in the build. Purely additive models/fields, no destructive change.
+- Deployed? Pushed to main. If prod is the forge container (per the 2026-08-31 entries), it needs a pull + rebuild; wherever the build runs with DATABASE_URL, db push applies the new tables.
+- Follow-ups / notes: add the two clients + their sites in the UI; point cron-job.org at check-sites; per-site GA4 property ids enable the 📊 deep link (real GA4 Data API metrics in-admin would need a Google service account — not built); client sites must fetch /api/sites/config to consume live edits; the D:\NextCloud mirror is stale (no .git) — re-sync or re-clone it.

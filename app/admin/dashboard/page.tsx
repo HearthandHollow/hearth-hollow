@@ -205,6 +205,12 @@ export default function AdminDashboard() {
         </div>
         <div className="flex flex-wrap gap-2 sm:mr-14">
           <Link
+            href="/admin/clients"
+            className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-brand hover:bg-brandDark text-white rounded-lg"
+          >
+            👥 Clients
+          </Link>
+          <Link
             href="/admin/settings"
             className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-brand hover:bg-brandDark text-white rounded-lg"
           >

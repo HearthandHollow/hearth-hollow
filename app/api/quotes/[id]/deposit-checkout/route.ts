@@ -45,7 +45,7 @@ export async function POST(
               name: `Deposit for ${projectRequest.category} project`,
               description: `Deposit for project request #${projectRequest.id.slice(0, 8)}`,
             },
-            unit_amount: Math.round(estimate.depositAmount), // Stripe expects amount in cents
+            unit_amount: Math.round(estimate.depositAmount * 100), // depositAmount is dollars; Stripe wants cents
           },
           quantity: 1,
         },

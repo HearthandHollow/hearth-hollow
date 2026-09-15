@@ -193,6 +193,8 @@ model Invoice {
 
   status      String     @default("draft") // draft, sent, paid
   sentAt      DateTime?
+  stripeSessionId String? // Stripe checkout session for online invoice payment
+  paidAt      DateTime?
 
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -326,3 +328,86 @@ model ThemeSettings {
   @@map("theme_settings")
 }
 
+
+// ── Client-business management (admin "Clients" hub) ────────────────────────
+// A client business Hearth & Hollow builds/runs websites and apps for
+// (e.g. the CHS urgent-care site, the farrier site). Holds the relationship:
+// contacts, billing defaults, sites, and monthly invoices.
+model Client {
+  id           String   @id @default(cuid())
+  businessName String
+  contactName  String?
+  email        String?
+  phone        String?
+  status       String   @default("active") // active | prospect | paused | former
+  notes        String?  @db.Text
+
+  // Billing defaults used to prefill monthly invoices
+  monthlyRate  Float?   // recurring care-plan/hosting rate in dollars
+  billingDay   Int?     // day of month invoices normally go out (1-28)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sites    ClientSite[]
+  invoices ClientInvoice[]
+
+  @@map("clients")
+}
+
+// One deployed website or app belonging to a Client. `config` is a JSON blob
+// of live-editable content (announcement banner, hours, phone, …) served to
+// the client site by GET /api/sites/config?token=<configToken> — the site
+// fetches it at load, so admin edits go live without a deploy. `configToken`
+// is the site's read credential; rotating it cuts the old one off.
+model ClientSite {
+  id       String @id @default(cuid())
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  name           String  // e.g. "Urgent care website"
+  url            String  // live URL, used for uptime checks
+  stagingUrl     String?
+  repoUrl        String?
+  hostingNotes   String? @db.Text // where it runs, DNS, credentials locations (no secrets)
+  ga4PropertyId  String? // numeric GA4 property id → deep-link into Analytics
+  config         Json    @default("{}")
+  configToken    String  @unique @default(cuid())
+
+  // Last uptime-check result (updated by the admin "Check now" button and the
+  // /api/cron/check-sites poller)
+  lastCheckedAt  DateTime?
+  lastStatusCode Int?
+  lastLatencyMs  Int?
+  lastOk         Boolean?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("client_sites")
+}
+
+// A (usually monthly) invoice to a Client — separate from the quote-system
+// `Invoice` model, which bills homeowner project work. Paid via a Stripe
+// Checkout link (webhook marks it paid) or marked paid manually.
+model ClientInvoice {
+  id       String @id @default(cuid())
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  invoiceNumber String  @unique // e.g. "HH-CLI-202609-001"
+  periodLabel   String  // e.g. "September 2026"
+  lineItems     Json    // [{ description: string, amount: number }]
+  total         Float
+  notes         String? @db.Text
+  status        String  @default("draft") // draft | sent | paid
+
+  stripeSessionId String?
+  sentAt          DateTime?
+  paidAt          DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("client_invoices")
+}

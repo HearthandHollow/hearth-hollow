@@ -138,7 +138,8 @@ export async function sendInvoiceEmail(
   projectId: string,
   invoiceNumber: string,
   totalAmount: number,
-  pdfBuffer: Buffer
+  pdfBuffer: Buffer,
+  payUrl?: string
 ) {
   try {
     const result = await resend.emails.send({
@@ -154,6 +155,7 @@ export async function sendInvoiceEmail(
           <p style="margin: 0;"><strong>Invoice #:</strong> ${invoiceNumber}</p>
           <p style="margin: 8px 0 0;"><strong>Total Due:</strong> $${totalAmount.toLocaleString()}</p>
         </div>
+        ${payUrl ? `<div style="margin:24px 0;"><a href="${payUrl}" style="background-color:#ea580c;color:#ffffff;padding:14px 32px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:bold;font-size:16px;">Pay Invoice Online</a></div>` : ""}
         <p>Please reply to this email with any questions about your invoice.</p>
         <p>Best regards,<br/>The Hearth & Hollow Team</p>
       `,
@@ -224,7 +226,7 @@ export async function sendDepositRequestEmail(
   depositAmount: number,
   checkoutUrl: string
 ) {
-  const formattedAmount = (depositAmount / 100).toLocaleString("en-US", {
+  const formattedAmount = depositAmount.toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
   });
