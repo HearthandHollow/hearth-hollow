@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+
+const WEB_DEV_CATEGORY = "Website & App Development";
 
 const CATEGORIES = [
   "General Carpentry",
@@ -11,6 +13,7 @@ const CATEGORIES = [
   "Wall Repair",
   "Welding",
   "Installation",
+  WEB_DEV_CATEGORY,
   "Other",
 ];
 
@@ -40,6 +43,22 @@ export default function RequestPage() {
     timeline: "",
     description: "",
   });
+
+  // Preselect the service category from ?category=… (e.g. links from the
+  // Website & App Development page). Read from window rather than
+  // useSearchParams so this page keeps rendering statically.
+  useEffect(() => {
+    try {
+      const preset = new URLSearchParams(window.location.search).get("category");
+      if (preset && CATEGORIES.includes(preset)) {
+        setFormData((prev) => (prev.category ? prev : { ...prev, category: preset }));
+      }
+    } catch {
+      // ignore — the user can still pick a category by hand
+    }
+  }, []);
+
+  const isWebDev = formData.category === WEB_DEV_CATEGORY;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -232,7 +251,11 @@ export default function RequestPage() {
             </div>
             <textarea
               name="description"
-              placeholder="Describe your project in detail (what needs to be done, materials, preferences, etc.)"
+              placeholder={
+                isWebDev
+                  ? "Tell us about your business and what you need: a new website or a redesign, online scheduling, a customer portal, payments, a mobile app, automation… Include your current site (if any) and any examples you like."
+                  : "Describe your project in detail (what needs to be done, materials, preferences, etc.)"
+              }
               value={formData.description}
               onChange={handleInputChange}
               rows={5}
@@ -244,7 +267,11 @@ export default function RequestPage() {
           {/* File Upload */}
           <div className="border-b pb-6">
             <h2 className="text-lg font-semibold mb-4">Upload Photos <span className="text-sm font-normal text-themeMuted">(Optional)</span></h2>
-            <p className="text-sm text-themeMuted mb-3">Max 5MB per file, 20MB total</p>
+            <p className="text-sm text-themeMuted mb-3">
+              {isWebDev
+                ? "Screenshots of your current site, sketches, or examples you like are helpful. Max 5MB per file, 20MB total"
+                : "Max 5MB per file, 20MB total"}
+            </p>
             <div className="border-2 border-dashed border-themeBorder rounded-lg p-8 text-center cursor-pointer hover:bg-themeBg transition">
               <input
                 type="file"

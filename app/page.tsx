@@ -52,6 +52,9 @@ export default function Home() {
             <Link href="/gallery" className="px-3 sm:px-4 py-2 text-sm sm:text-base text-themeMuted hover:text-themeText">
               Our Work
             </Link>
+            <Link href="/development" className="px-3 sm:px-4 py-2 text-sm sm:text-base text-themeMuted hover:text-themeText">
+              Web &amp; Apps
+            </Link>
             <Link href="/request" className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-brand text-white rounded-lg hover:bg-brandDark">
               Request Quote
             </Link>
@@ -74,7 +77,7 @@ export default function Home() {
               Welcome to The Hearth &amp; Hollow
             </h2>
             <p className="text-base sm:text-lg text-white/90 mb-8 max-w-xl drop-shadow">
-              We help you build a self-sufficient life through skilled craftsmanship. From handyman repairs to custom woodworking and metal fabrication — tell us about your project, upload photos, and we'll send you a professional estimate within 24 hours.
+              We help you build a self-sufficient life through skilled craftsmanship. From handyman repairs, custom woodworking, and metal fabrication to websites and apps for your business — tell us about your project, upload photos, and we'll send you a professional estimate within 24 hours.
             </p>
             <Link
               href="/request"
@@ -90,7 +93,7 @@ export default function Home() {
         {/* Services */}
         <div className="bg-amber-50 border border-brand rounded-lg p-5 sm:p-8 mb-12">
           <h3 className="text-2xl font-bold text-brandDark mb-4">Our Services</h3>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div>
               <h4 className="font-semibold text-brandDark mb-2">🔨 Handyman & Repairs</h4>
               <p className="text-themeMuted text-sm">General repairs, installations, and maintenance for your home or homestead. From fixing doors to building systems — we handle it all with care.</p>
@@ -102,6 +105,43 @@ export default function Home() {
             <div>
               <h4 className="font-semibold text-brandDark mb-2">⚙️ Metal Fabrication</h4>
               <p className="text-themeMuted text-sm">Custom welding, gates, railings, and metal structures. Expert metalwork for both residential projects and homestead infrastructure.</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-brandDark mb-2">💻 Websites & Apps</h4>
+              <p className="text-themeMuted text-sm">
+                Business websites, online scheduling, customer portals, mobile apps, and AI automation — built and hosted for trades, practices, and homesteads.{" "}
+                <Link href="/development" className="text-brand font-semibold hover:underline">Learn more →</Link>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Digital craft — websites & apps */}
+        <div className="bg-white border border-themeBorder rounded-lg p-5 sm:p-8 my-12">
+          <div className="grid md:grid-cols-3 gap-6 sm:gap-10 items-center">
+            <div className="md:col-span-2">
+              <p className="text-sm font-semibold uppercase tracking-wide text-brand mb-2">Website &amp; App Development</p>
+              <h3 className="text-2xl font-bold text-brandDark mb-3">Digital craft for businesses that work with their hands</h3>
+              <p className="text-themeMuted mb-3">
+                The same care we put into a joint or a weld goes into the software we build. This site, our AI quote system, and RackerTracker — our pool-tournament app on the App Store and Google Play — are all built in-house, and we build and host sites for other local businesses too.
+              </p>
+              <p className="text-themeMuted">
+                Websites that show up on Google, online scheduling and bill pay, customer and staff portals, iOS and Android apps, and AI agents that answer the phone — scoped to what your business needs, with a simple monthly care plan after launch.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <Link
+                href="/development"
+                className="inline-block text-center px-6 py-3 bg-brand text-white rounded-lg hover:bg-brandDark shadow"
+              >
+                See what we build →
+              </Link>
+              <Link
+                href="/request?category=Website%20%26%20App%20Development"
+                className="inline-block text-center px-6 py-3 border border-brand text-brandDark rounded-lg hover:bg-amber-50"
+              >
+                Request a proposal
+              </Link>
             </div>
           </div>
         </div>
@@ -183,7 +223,7 @@ export default function Home() {
               We're a team of skilled craftspeople dedicated to helping you build a self-sufficient, thriving homestead. Our mission is to combine ancient craft wisdom with modern expertise to create structures and solutions that last generations.
             </p>
             <p className="text-themeMuted">
-              Whether you need a quick repair, a custom build, or infrastructure for your homestead, we approach every project with intention, quality, and deep respect for the craft. Every nail, every joint, every weld is an investment in your independence and prosperity.
+              Whether you need a quick repair, a custom build, infrastructure for your homestead, or a website and app for your business, we approach every project with intention, quality, and deep respect for the craft. Every nail, every joint, every weld, every line of code is an investment in your independence and prosperity.
             </p>
           </div>
         </div>
