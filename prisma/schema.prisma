@@ -50,6 +50,12 @@ model ProjectRequest {
   // re-notifying on the same message.
   lastSeenInboundMessageId String?
 
+  // Brain (Claude Code on Hunter's subscription) estimate drafting. Hunter
+  // queues a request from admin; queuing triggers NOTHING — Brain only picks it
+  // up when Hunter asks it to. none -> queued -> draft_ready -> reviewed.
+  analysisState    String    @default("none")
+  analysisQueuedAt DateTime?
+
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -141,6 +147,11 @@ model Estimate {
   materialList        Json?   // [{ item, quantity, unit, estimatedPrice }] structured material list w/ pricing
   timeEstimation      String? // e.g., "3-5 days", "1-2 weeks"
   isEdited           Boolean @default(false) // tracks if admin manually adjusted
+
+  // Who produced the numbers: "api" (Anthropic API analyzer), "brain" (draft
+  // written by Brain, must be approved before sending), or "manual".
+  source             String  @default("api")
+  reviewedAt         DateTime? // when Hunter approved a Brain draft
 
   // Which tier (low/expected/high) the admin has selected to actually quote the customer
   selectedTier String @default("expected") // "low" | "expected" | "high"
@@ -410,4 +421,15 @@ model ClientInvoice {
   updatedAt DateTime @updatedAt
 
   @@map("client_invoices")
+}
+
+// One row per Anthropic API call the site makes for quotes (estimate or
+// email-thread analysis). Backs the QUOTE_ANALYSIS_API_DAILY_CAP spend guard.
+model AiUsage {
+  id        String   @id @default(cuid())
+  kind      String   // "estimate" | "email"
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("ai_usage")
 }

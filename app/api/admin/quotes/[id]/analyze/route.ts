@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { analyzeWithClaude } from '@/lib/claude-analyzer';
+import { claimQuoteApiCall } from '@/lib/ai-flags';
 
 async function isAuthenticated(req: NextRequest) {
   const cookieStore = await cookies();
@@ -26,6 +27,12 @@ export async function POST(
         { error: 'Database not available' },
         { status: 503 }
       );
+    }
+
+    // Off by default: estimates come from Brain drafts (see /api/brain/*).
+    const gate = await claimQuoteApiCall('estimate');
+    if (!gate.ok) {
+      return NextResponse.json({ error: gate.error }, { status: gate.status });
     }
 
     // Optional flag from the admin UI to include uploaded photos in vision analysis.
@@ -85,6 +92,7 @@ export async function POST(
       where: { projectId: params.id },
       create: {
         projectId: params.id,
+        source: 'api',
         lowEstimate: analysis.lowEstimate,
         expectedEstimate: analysis.expectedEstimate,
         highEstimate: analysis.highEstimate,
@@ -96,6 +104,7 @@ export async function POST(
       },
       update: {
         lowEstimate: analysis.lowEstimate,
+        source: 'api',
         expectedEstimate: analysis.expectedEstimate,
         highEstimate: analysis.highEstimate,
         breakdown: analysis.breakdown,
