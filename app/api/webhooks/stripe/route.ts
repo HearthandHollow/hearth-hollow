@@ -71,9 +71,19 @@ export async function POST(req: NextRequest) {
       }
 
       // --- Deposit payment (on quote approval) ---
+      // Payment Links we create outside the app (e.g. the Carolina HealthCare
+      // care-plan subscription and the one-time domain link) also fire
+      // checkout.session.completed, but carry no projectId in their metadata.
+      // Those events are not ours to process — acknowledge them with 200 so
+      // Stripe stops retrying and doesn't disable the endpoint. Only the
+      // signature checks above should ever return a non-2xx for a real event.
       if (!metadata.projectId) {
-        console.error('Missing projectId in session metadata');
-        return NextResponse.json({ error: 'Missing projectId' }, { status: 400 });
+        console.log('[webhook] checkout.session.completed ignored — no projectId', {
+          eventId: event.id,
+          paymentLink: session.payment_link ?? null,
+          metadata,
+        });
+        return NextResponse.json({ received: true, ignored: 'no projectId' });
       }
 
       const estimate = await prisma.estimate.findFirst({
