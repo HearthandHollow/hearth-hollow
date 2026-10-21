@@ -14,7 +14,7 @@ import { prisma } from "./prisma";
 import { sendAdminPush } from "./push";
 
 export async function createNotification(opts: {
-  type: "new_request" | "email_reply" | "booking" | "whatsapp";
+  type: "new_request" | "email_reply" | "booking" | "whatsapp" | "brain_draft";
   title: string;
   message: string;
   url?: string;

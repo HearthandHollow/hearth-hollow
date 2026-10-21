@@ -11,6 +11,7 @@ interface Quote {
   description: string;
   status: string;
   approvalStatus: string;
+  analysisState?: 'none' | 'queued' | 'draft_ready' | 'reviewed';
   createdAt: string;
   emailSentAt?: string;
   clientApprovedAt?: string;
@@ -382,6 +383,16 @@ export default function AdminDashboard() {
                             <p className="text-sm text-themeMuted line-clamp-2 mt-2">
                               {quote.description}
                             </p>
+                            {quote.analysisState === 'queued' && (
+                              <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-300">
+                                ⏳ Queued for Brain
+                              </span>
+                            )}
+                            {quote.analysisState === 'draft_ready' && (
+                              <span className="inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 border border-amber-300">
+                                📝 Draft — Brain · needs review
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

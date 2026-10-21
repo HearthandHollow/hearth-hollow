@@ -4,6 +4,7 @@ import { verifySessionToken } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { findThreadByReference, isGmailConfigured } from '@/lib/gmail';
 import { analyzeEmailThread } from '@/lib/email-analyzer';
+import { claimQuoteApiCall } from '@/lib/ai-flags';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,6 +42,12 @@ export async function POST(
         { error: 'No conversation found to analyze' },
         { status: 404 }
       );
+    }
+
+    // Same switch + daily cap as estimate analysis (off by default).
+    const gate = await claimQuoteApiCall('email');
+    if (!gate.ok) {
+      return NextResponse.json({ error: gate.error }, { status: gate.status });
     }
 
     const analysis = await analyzeEmailThread(

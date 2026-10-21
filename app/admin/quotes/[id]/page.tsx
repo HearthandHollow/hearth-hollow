@@ -18,6 +18,8 @@ interface Quote {
   clientDeniedAt?: string;
   scheduledDate?: string | null;
   scheduledSlot?: string | null;
+  analysisState?: 'none' | 'queued' | 'draft_ready' | 'reviewed';
+  analysisQueuedAt?: string | null;
   customer?: {
     name: string;
     email: string;
@@ -42,6 +44,8 @@ interface Quote {
     isEdited?: boolean;
     selectedTier?: 'low' | 'expected' | 'high';
     depositAmount?: number;
+    source?: 'api' | 'brain' | 'manual';
+    reviewedAt?: string | null;
   };
 }
 
@@ -111,6 +115,10 @@ export default function QuoteDetailPage() {
   const [imageLoadErrors, setImageLoadErrors] = useState<Record<string, boolean>>({});
   const [changingStatus, setChangingStatus] = useState(false);
   const [includePhotos, setIncludePhotos] = useState(false);
+  // Anthropic API analysis is off unless QUOTE_ANALYSIS_API_ENABLED=true;
+  // estimates come from Brain drafts (Queue for Brain -> ask Brain).
+  const [apiEnabled, setApiEnabled] = useState(false);
+  const [brainBusy, setBrainBusy] = useState(false);
   const [emails, setEmails] = useState<EmailMsg[]>([]);
   const [emailsConfigured, setEmailsConfigured] = useState(true);
   const [emailsLoading, setEmailsLoading] = useState(false);
@@ -248,8 +256,8 @@ export default function QuoteDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ includePhotos }),
       });
-      if (!response.ok) throw new Error('Analysis failed');
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Analysis failed');
       setQuote(data);
       if (data.estimate) {
         syncEstimateEditData(data.estimate);
@@ -258,6 +266,34 @@ export default function QuoteDetailPage() {
       setError(err instanceof Error ? err.message : 'Failed to analyze quote');
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetch('/api/admin/ai-status')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setApiEnabled(!!d?.apiEnabled))
+      .catch(() => {});
+  }, []);
+
+  // queue / unqueue / approve a Brain draft. Queuing triggers nothing by itself.
+  const handleBrain = async (action: 'queue' | 'unqueue' | 'approve') => {
+    setBrainBusy(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/quotes/${quoteId}/brain`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Brain action failed');
+      setQuote(data);
+      if (data.estimate) syncEstimateEditData(data.estimate);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Brain action failed');
+    } finally {
+      setBrainBusy(false);
     }
   };
 
@@ -282,8 +318,8 @@ export default function QuoteDetailPage() {
       const response = await fetch(`/api/admin/quotes/${quoteId}/send`, {
         method: 'POST',
       });
-      if (!response.ok) throw new Error('Failed to send estimate');
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Failed to send estimate');
       setQuote(data);
       setError('');
     } catch (err) {
@@ -1102,7 +1138,28 @@ export default function QuoteDetailPage() {
                   Edit Estimate
                 </button>
               )}
-              {assetsWithUrls.some((a) => a.mimeType?.startsWith('image/')) && (
+              {quote.analysisState === 'queued' ? (
+                <button
+                  onClick={() => handleBrain('unqueue')}
+                  disabled={brainBusy}
+                  className="px-4 py-2 border border-themeBorder rounded-lg text-themeMuted disabled:opacity-50 font-semibold"
+                  title="Queued — ask Brain to analyze it. Click to take it off the queue."
+                >
+                  ⏳ Queued for Brain · Unqueue
+                </button>
+              ) : (
+                quote.status !== 'sent' && (
+                  <button
+                    onClick={() => handleBrain('queue')}
+                    disabled={brainBusy || isEditing || isEditingEstimate}
+                    className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brandDark disabled:opacity-50 font-semibold"
+                    title="Marks this request for Brain. Nothing runs until you ask Brain to analyze it."
+                  >
+                    {quote.estimate?.source === 'brain' ? 'Re-queue for Brain' : 'Queue for Brain'}
+                  </button>
+                )
+              )}
+              {apiEnabled && assetsWithUrls.some((a) => a.mimeType?.startsWith('image/')) && (
                 <label className="flex items-center gap-2 text-sm text-themeMuted select-none mr-2">
                   <input
                     type="checkbox"
@@ -1113,15 +1170,44 @@ export default function QuoteDetailPage() {
                   Include photos
                 </label>
               )}
-              <button
-                onClick={handleAnalyze}
-                disabled={analyzing || isEditing || isEditingEstimate}
-                className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent disabled:opacity-50 font-semibold"
-              >
-                {analyzing ? 'Analyzing...' : quote.estimate ? 'Re-Analyze' : 'Analyze'}
-              </button>
+              {apiEnabled && (
+                <button
+                  onClick={handleAnalyze}
+                  disabled={analyzing || isEditing || isEditingEstimate}
+                  className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent disabled:opacity-50 font-semibold"
+                  title="Anthropic API analysis (pay-per-use, daily cap)"
+                >
+                  {analyzing ? 'Analyzing...' : quote.estimate ? 'Re-Analyze (API)' : 'Analyze (API)'}
+                </button>
+              )}
             </div>
           </div>
+
+          {quote.estimate?.source === 'brain' && (
+            quote.estimate.reviewedAt ? (
+              <div className="mb-4 px-4 py-2 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm font-semibold">
+                ✅ Brain draft — approved {new Date(quote.estimate.reviewedAt).toLocaleString()}
+              </div>
+            ) : (
+              <div className="mb-4 p-4 rounded-lg bg-amber-50 border-2 border-amber-400">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <p className="font-bold text-amber-900">📝 Draft — Brain</p>
+                    <p className="text-sm text-amber-900">
+                      Review the numbers, line items, assumptions and customer questions below. Edit anything, then approve. Nothing is emailed until you send it.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleBrain('approve')}
+                    disabled={brainBusy || isEditingEstimate}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-semibold whitespace-nowrap"
+                  >
+                    Approve draft
+                  </button>
+                </div>
+              </div>
+            )
+          )}
 
           {isEditingEstimate && quote.estimate && (
             <div className="mb-6 p-6 bg-amber-50 border-2 border-brand rounded-lg">
@@ -1366,9 +1452,12 @@ export default function QuoteDetailPage() {
               {quote.status !== 'sent' && (
                 <button
                   onClick={handleSendEstimate}
-                  className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
+                  disabled={quote.estimate.source === 'brain' && !quote.estimate.reviewedAt}
+                  className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
                 >
-                  Send Estimate to Customer
+                  {quote.estimate.source === 'brain' && !quote.estimate.reviewedAt
+                    ? 'Approve the Brain draft to enable sending'
+                    : 'Send Estimate to Customer'}
                 </button>
               )}
 
@@ -1381,7 +1470,11 @@ export default function QuoteDetailPage() {
           )}
 
           {!quote.estimate && (
-            <p className="text-themeMuted">No analysis yet. Click "Analyze" to generate an estimate.</p>
+            <p className="text-themeMuted">
+              {quote.analysisState === 'queued'
+                ? 'Queued for Brain. Ask Brain to "analyze the next quote" and a draft will appear here.'
+                : 'No estimate yet. Click "Queue for Brain", then ask Brain to analyze it.'}
+            </p>
           )}
         </div>
 

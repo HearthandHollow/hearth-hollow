@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getObjectBytes } from "@/lib/s3";
+import { buildEstimatorPrompt } from "@/lib/estimator-prompt";
 
 // Image types Claude's vision API accepts.
 const VISION_MIME_TYPES = new Set([
@@ -85,29 +86,7 @@ export async function analyzeWithClaude(
       ? `\n\nThe customer attached ${attachedImages} photo(s) of the project, included above. Use them to inform your estimate (assess condition, scope, materials, and complexity from what you can see).`
       : "";
 
-  const isWebDev = /website|web\s*&?\s*app|app development|software/i.test(quote.category);
-
-  const prompt = isWebDev
-    ? `You are a senior estimator for a small web and mobile app development studio (The Hearth & Hollow, Salisbury NC) that builds Next.js websites, online scheduling, customer/staff portals, Stripe payments, cross-platform mobile apps (Expo/React Native), and AI automation for trades, small practices, and homesteads. Analyze this request and provide a fixed-price estimate for the initial build (excluding the monthly hosting/care plan).
-
-Pricing guide: blended rate $85/hour. Typical ranges — brochure site 4–6 pages $1,200–2,500; site + online scheduling/booking $2,500–4,500; customer or staff portal with logins $4,000–9,000; Stripe payments/invoicing add $800–2,000; cross-platform mobile app MVP $8,000–20,000; AI voice/quote agent $1,500–4,000. Adjust for integrations, content volume, and design complexity.
-
-CATEGORY: ${quote.category}
-DESCRIPTION: ${quote.description}${photoNote}
-
-Respond with ONLY valid JSON (no markdown):
-{"low_estimate": 1500, "expected_estimate": 2500, "high_estimate": 4000, "complexity": 5, "scope_summary": "what will be built", "key_risks": [], "material_list": [{"item": "Domain registration (annual)", "quantity": 1, "unit": "year", "estimated_price": 20}]}
-
-For material_list: list third-party costs the customer will pay (domain, hosting/care plan per month, app store developer fees, SMS/telephony, payment processing setup) with realistic current USD prices PER UNIT. Do not list lumber or physical materials.`
-    : `You are a professional handyman estimator. Analyze this project and provide estimates, including a best-effort itemized material list with realistic current US retail prices and quantities.
-
-CATEGORY: ${quote.category}
-DESCRIPTION: ${quote.description}${photoNote}
-
-Respond with ONLY valid JSON (no markdown):
-{"low_estimate": 500, "expected_estimate": 750, "high_estimate": 1200, "complexity": 5, "scope_summary": "work needed", "key_risks": [], "material_list": [{"item": "2x4x8 pressure-treated lumber", "quantity": 12, "unit": "board", "estimated_price": 6.50}]}
-
-For material_list: estimate every material likely needed for this specific project to the best of your ability given the description (and photos, if provided). "estimated_price" is the price PER UNIT in USD. If you genuinely cannot estimate any materials (e.g. pure labor task), return an empty array.`;
+  const prompt = buildEstimatorPrompt(quote, photoNote);
 
   messageContent.push({ type: "text", text: prompt });
 

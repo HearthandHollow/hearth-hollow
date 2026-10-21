@@ -50,6 +50,14 @@ export async function POST(
       );
     }
 
+    // A Brain draft is never emailed until Hunter has reviewed and approved it.
+    if (quote.estimate.source === 'brain' && !quote.estimate.reviewedAt) {
+      return NextResponse.json(
+        { error: 'This is an unreviewed Brain draft. Click "Approve draft" first.' },
+        { status: 409 }
+      );
+    }
+
     console.log(`Sending estimate for quote ${params.id} to ${quote.customer?.email}`);
 
     const tier = (quote.estimate.selectedTier as 'low' | 'expected' | 'high') || 'expected';
