@@ -54,10 +54,13 @@ One WhatsApp Business number for every Hearth & Hollow project. Built 2026-10-21
 3. Merge to `main` → forge autodeploy (~5 min).
 4. Meta App → WhatsApp → Configuration: callback `https://thehearthhollow.com/api/whatsapp/webhook`,
    verify token = `WHATSAPP_VERIFY_TOKEN`; subscribe the **messages** field.
-5. Subscribe the app to the WABA: `POST /{WABA_ID}/subscribed_apps`.
+5. Subscribe the app to the WABA: `POST /{WABA_ID}/subscribed_apps`. *(Done 2026-10-21 for the real
+   WABA 1767089994564253.)*
 6. Register the number once: `POST /{PHONE_NUMBER_ID}/register {"messaging_product":"whatsapp","pin":"<PIN>"}`.
-7. Test with Meta's test number first (set `WHATSAPP_PHONE_NUMBER_ID` to the test number's id, send
-   from an allow-listed phone), then switch the id to the real number.
+   *(Done 2026-10-21 for the real number, id 1458896760631238.)*
+7. ~~Test with Meta's test number first~~. Meta's test number (1405632999298261) is blocked on Meta's
+   side, so the branch was tested on the real number through a temporary tunnel on 2026-10-21 (passed;
+   see session_log). After go-live, send one message from a phone to confirm the deployed webhook works.
 8. **Publish the Meta app** (+ Business Verification) — until published Meta only delivers TEST webhooks.
 9. Submit the templates in `docs/whatsapp-templates.md` in WhatsApp Manager.
 
