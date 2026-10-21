@@ -78,5 +78,13 @@ Internal package name is still `handyman-quote-generator` (v0.2.0).
 ## Skydive Weather micro-site (added 2026-08-06)
 A second brand served by this same app at **skydive-weather.thehearthhollow.com** via a host rewrite in root `middleware.ts` (subdomain paths → `app/skydive/*`; also reachable at `/skydive` on the main domain). Users sign up (email + US location), get a passwordless magic-link dashboard, set personal go/no-go weather limits, and receive a daily Resend email. Weather data: official NWS API (`api.weather.gov`) point→gridpoint hourly layers (wind, gusts, sky cover, ceiling, precip, thunder). Key pieces: `lib/skydive/{nws,evaluate,email,auth,site}.ts`, `app/skydive/*`, `app/api/skydive/{signup,me,settings,forecast,unsubscribe}`, hourly cron `app/api/cron/skydive-notify?secret=CRON_SECRET` (cron-job.org, same as email-replies poller), Prisma model `SkydiveUser` (`skydive_users`). Full setup/ops: `SKYDIVE_WEATHER_SETUP.md`. Needs one-time infra: Cloudflare DNS + tunnel hostname for the subdomain, the hourly cron job, and `prisma db push`.
 
+## WhatsApp Comms Hub (added 2026-10-21, branch `whatsapp-comms-hub`, NOT deployed)
+One WhatsApp Business number (display name **The Hearth and Hollow**) for every project. Full guide: `WHATSAPP_SETUP.md`; template drafts: `docs/whatsapp-templates.md`.
+- Code: `lib/whatsapp/{core,graph,store,alerts}.ts`; routes `app/api/whatsapp/webhook` (Meta GET handshake + signed POST), `app/api/comms/whatsapp/send` (per-project bearer, templates only), `app/api/admin/whatsapp/*` (inbox APIs), page `app/admin/messages` (dashboard "💬 Messages").
+- Models `WaContact` / `WaConversation` / `WaMessage` + enum `WaProject` (additive; needs `prisma db push` on forge before merge).
+- Rules, no AI: prefix tags (`RT:` `HH:` `FARM:` `FAB:` `CS:`), one interactive menu per untagged conversation, STOP/START, free-form only inside the 24h window, opted-out numbers can't be messaged. Alerts = email (batched 15 min/thread); push behind `WHATSAPP_ALERT_PUSH`.
+- Customer numbers are masked to the last 4 digits in logs (`maskNumber`). Media is private S3 (`putPrivateObject` in lib/s3.ts — throws, unlike `uploadToS3`).
+- **Hosting reminder:** the live site is forge (local Postgres, env in `/opt/stacks/hearthhollow/.env.app`), not Vercel/Neon — WhatsApp env vars must be set THERE for production.
+
 ## Reference docs in repo
 `PROJECT_CONTEXT_BRIEF.md` (architecture + security-audit history), `PLAYBOOK.md`, `DEPLOYMENT.md`, `RETELL_VOICE_QUOTE_SETUP.md`, and this `.claude/` folder.
