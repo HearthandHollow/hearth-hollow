@@ -151,3 +151,12 @@ export async function getSignedUrlForKey(key: string): Promise<string> {
     throw error;
   }
 }
+
+// Strict private upload for WhatsApp media: throws on failure (uploadToS3 above
+// returns a placeholder key instead, which would hide lost media).
+export async function putPrivateObject(key: string, body: Buffer, contentType: string): Promise<string> {
+  const bucketName = process.env.AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET || 'hearth-and-hollow-quotes';
+  if (!s3Client) throw new Error("S3 not configured");
+  await s3Client.send(new PutObjectCommand({ Bucket: bucketName, Key: key, Body: body, ContentType: contentType }));
+  return key;
+}

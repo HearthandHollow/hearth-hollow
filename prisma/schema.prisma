@@ -411,3 +411,80 @@ model ClientInvoice {
 
   @@map("client_invoices")
 }
+
+// ─── WhatsApp Comms Hub (Brain, 2026-10-21) ─────────────────────────────────
+// One WhatsApp Business number for every Hearth & Hollow project. Inbound
+// messages arrive at /api/whatsapp/webhook, Hunter reads/replies in
+// /admin/messages, and projects send approved templates via
+// /api/comms/whatsapp/send. Customer numbers/content never go to logs.
+enum WaProject {
+  RACKERTRACKER
+  HANDYMAN
+  HOMESTEAD
+  FABRICATION
+  CLIENT_SITES
+  GENERAL
+}
+
+model WaContact {
+  id          String      @id @default(cuid())
+  waId        String      @unique // WhatsApp id = E.164 digits, no "+"
+  profileName String?
+  optedIn     Boolean     @default(false)
+  optInSource String? // "inbound" | "rackertracker" | "quote_form" | "admin"
+  optedInAt   DateTime?
+  optedOutAt  DateTime?
+  projects    WaProject[] // every project this contact has talked to
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  conversations WaConversation[]
+
+  @@map("wa_contacts")
+}
+
+model WaConversation {
+  id            String     @id @default(cuid())
+  contactId     String
+  contact       WaContact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  project       WaProject? // null until tagged (prefix, menu choice or admin)
+  status        String     @default("open") // open | closed
+  lastInboundAt DateTime? // starts the 24h customer-service window
+  lastMessageAt DateTime   @default(now())
+  unreadCount   Int        @default(0)
+  menuSentAt    DateTime? // project menu auto-sent (once per conversation)
+  alertedAt     DateTime? // last email alert for this thread (batching)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  messages WaMessage[]
+
+  @@index([status, lastMessageAt])
+  @@index([project, lastMessageAt])
+  @@index([contactId])
+  @@map("wa_conversations")
+}
+
+model WaMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  conversation   WaConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  direction      String // in | out
+  type           String // text | image | audio | video | document | sticker | interactive | template | button | location | contacts | reaction | unsupported
+  body           String?        @db.Text
+  mediaKey       String? // private S3 key (never a public URL)
+  mediaMime      String?
+  mediaId        String? // Meta media id (inbound) until downloaded
+  wamid          String?        @unique // WhatsApp message id
+  status         String // received | queued | sent | delivered | read | failed
+  errorCode      Int?
+  errorTitle     String?
+  templateName   String?
+  sentBy         String? // admin | auto | api:<project>
+  waTimestamp    DateTime? // Meta's timestamp for the event
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([conversationId, createdAt])
+  @@map("wa_messages")
+}
