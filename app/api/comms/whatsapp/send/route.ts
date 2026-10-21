@@ -26,6 +26,11 @@ export async function POST(req: NextRequest) {
   if (!isProject(project) || project !== tokenProject) return NextResponse.json({ error: "project not allowed for this token" }, { status: 403 });
   if (!to || !/^[a-z0-9_]{1,512}$/.test(template)) return NextResponse.json({ error: "to and template_name are required" }, { status: 400 });
 
+  // Refuse before creating anything, so a rejected send leaves no empty thread in the inbox.
+  const existing = await prisma.waContact.findUnique({ where: { waId: to } });
+  if (existing?.optedOutAt && !existing.optedIn) return NextResponse.json({ error: "recipient opted out" }, { status: 409 });
+  if (!b?.opt_in && !existing?.optedIn) return NextResponse.json({ error: "recipient has not opted in" }, { status: 409 });
+
   const { contact, conv } = await conversationFor(to, project);
   if (b?.opt_in && !contact.optedOutAt) {
     await prisma.waContact.update({
