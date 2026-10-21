@@ -232,7 +232,10 @@ export default function Home() {
       {/* Footer */}
       <footer className="bg-amber-50 border-t border-brand mt-12">
         <div className="max-w-6xl mx-auto px-4 py-8 text-center text-brandDark">
-          <p>&copy; 2026 {process.env.NEXT_PUBLIC_COMPANY_NAME || "The Hearth & Hollow"}. All rights reserved.</p>
+          <p>
+            &copy; 2026 {process.env.NEXT_PUBLIC_COMPANY_NAME || "The Hearth & Hollow"}. All rights reserved. ·{" "}
+            <Link href="/privacy" className="underline hover:text-brand">Privacy Policy</Link>
+          </p>
           <p className="text-sm text-themeMuted mt-2">Crafted for Self-Sufficiency • Built to Last</p>
         </div>
       </footer>
