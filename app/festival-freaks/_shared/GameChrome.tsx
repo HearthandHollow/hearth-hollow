@@ -20,6 +20,9 @@ export function GameHeader() {
           <Link href="/festival-freaks" className="px-3 sm:px-4 py-2 text-sm sm:text-base text-themeMuted hover:text-themeText">
             Game
           </Link>
+          <Link href="/festivalfreaks" className="px-3 sm:px-4 py-2 text-sm sm:text-base text-themeMuted hover:text-themeText">
+            Download
+          </Link>
           <Link href="/festival-freaks/privacy" className="px-3 sm:px-4 py-2 text-sm sm:text-base text-themeMuted hover:text-themeText">
             Privacy
           </Link>
