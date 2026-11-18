@@ -15,6 +15,23 @@ export const FESTIVAL_FREAKS_PAGE = "https://thehearthhollow.com/festivalfreaks"
 
 export const FESTIVAL_FREAKS_RELEASES: FestivalFreaksRelease[] = [
   {
+    build: 6,
+    version: "0.6.0",
+    released: "2026-11-18",
+    size: "3.19 GB",
+    download: "https://drive.google.com/file/d/1n2r4_541YDFRJiDOdGnbH6QjzW5-rm1o/view",
+    notes: [
+      "The garage: do up the RV, private jet or UFO (paint, livery, wheels, four interiors, extras)",
+      "A rebuilt RV and jet, and a real UFO with a ramp and a mothership inside",
+      "Proper planets in the sky",
+      "Hats sized to each head",
+      "A working mirror",
+      "Crew and vendors no longer stand with their arms out",
+      "Treat effects keep going in the golf cart",
+      "Build menu sections, 598 acts, 45° rotation, eating and drinking, major events, varied gravity",
+    ],
+  },
+  {
     build: 4,
     version: "0.4.0",
     released: "2026-11-17",
