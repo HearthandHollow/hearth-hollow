@@ -434,6 +434,19 @@ model AiUsage {
   @@map("ai_usage")
 }
 
+// Festival Freaks daily hit counts (Brain, 2026-11-18). Counts only — no IPs,
+// user agents or anything else about the visitor. kind is "version_check"
+// (the game polling /festivalfreaks/version.json at start-up, optionally
+// "version_check_b<build>"), "page_view" or "download_click".
+model FestivalFreaksStat {
+  day   String // YYYY-MM-DD, America/New_York
+  kind  String
+  count Int    @default(0)
+
+  @@id([day, kind])
+  @@map("festival_freaks_stats")
+}
+
 // ─── WhatsApp Comms Hub (Brain, 2026-10-21) ─────────────────────────────────
 // One WhatsApp Business number for every Hearth & Hollow project. Inbound
 // messages arrive at /api/whatsapp/webhook, Hunter reads/replies in

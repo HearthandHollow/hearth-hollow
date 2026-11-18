@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { GameFooter, GameHeader, Section } from "../festival-freaks/_shared/GameChrome";
-import { FESTIVAL_FREAKS_RELEASES, latestFestivalFreaksRelease } from "@/lib/festival-freaks-releases";
+import { FESTIVAL_FREAKS_RELEASES, countFestivalFreaksHit, latestFestivalFreaksRelease } from "@/lib/festival-freaks-releases";
 
 export const metadata: Metadata = {
   title: "Download Festival Freaks — The Hearth & Hollow",
@@ -11,7 +11,11 @@ function formatDate(iso: string) {
   return new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
 }
 
+// Rendered per request so each visit can be counted.
+export const dynamic = "force-dynamic";
+
 export default function FestivalFreaksDownloadPage() {
+  countFestivalFreaksHit("page_view");
   const latest = latestFestivalFreaksRelease;
   const older = FESTIVAL_FREAKS_RELEASES.slice(1);
 
@@ -36,7 +40,7 @@ export default function FestivalFreaksDownloadPage() {
             Released {formatDate(latest.released)} · {latest.size}
           </p>
           <a
-            href={latest.download}
+            href="/festivalfreaks/download"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block w-full sm:w-auto text-center px-8 py-4 bg-brand text-white rounded-lg hover:bg-brandDark text-lg font-semibold shadow-lg"

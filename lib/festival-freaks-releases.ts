@@ -42,3 +42,19 @@ export function festivalFreaksVersionJson() {
     notes: r.notes,
   };
 }
+
+// Bump today's counter for one kind of hit. Fire-and-forget: a counting
+// failure must never break the page, the download or the game's update check.
+export function countFestivalFreaksHit(kind: string) {
+  if (!process.env.DATABASE_URL) return;
+  const day = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  import("@/lib/prisma")
+    .then(({ prisma }) =>
+      prisma.festivalFreaksStat.upsert({
+        where: { day_kind: { day, kind } },
+        create: { day, kind, count: 1 },
+        update: { count: { increment: 1 } },
+      }),
+    )
+    .catch(() => {});
+}
