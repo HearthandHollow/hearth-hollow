@@ -15,6 +15,21 @@ export const FESTIVAL_FREAKS_PAGE = "https://thehearthhollow.com/festivalfreaks"
 
 export const FESTIVAL_FREAKS_RELEASES: FestivalFreaksRelease[] = [
   {
+    build: 7,
+    version: "0.7.0",
+    released: "2026-11-19",
+    size: "3.19 GB",
+    download: "https://drive.google.com/file/d/1n2r4_541YDFRJiDOdGnbH6QjzW5-rm1o/view",
+    notes: [
+      "Your own home town by the RV: buy lots in any direction, build 15 things (cabin, diner, arcade, studio, trophy hall, greenhouse, hot tub, bonfire, observatory, skate bowl, windmill, neon sign, statue, fireworks, hammocks), each with something to do",
+      "New attractions: arcade, carousel, hot-air balloon, water slide, bumper cars, zipline, drone show, laser show",
+      "Crew tents: place one per role and the crew work out of it",
+      "Fly the UFO's scout saucer over the festival",
+      "Smarter pathing for guests and crew",
+      "RV mirrors, glass and details",
+    ],
+  },
+  {
     build: 6,
     version: "0.6.0",
     released: "2026-11-18",
